@@ -9,5 +9,5 @@ export function PhaseBanner({ vault }: { vault: VaultView }) {
   if (vault.phase === "investment") {
     return <div className="phase">The vault is lending. Deposits are closed; withdrawals open in <Countdown to={vault.redemptionDate} />.</div>;
   }
-  return <div className="phase phase--open">Redemption phase: depositors can withdraw.</div>;
+  return <div className="phase phase--open">Redemption phase: lenders can withdraw.</div>;
 }

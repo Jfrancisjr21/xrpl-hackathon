@@ -15,6 +15,13 @@ describe("api", () => {
     expect(err).toMatchObject({ message: "Deposits are closed", status: 409, opensAt: "2026-10-25T12:00:00.000Z" });
   });
 
+  it("says the API can't be reached when fetch fails outright", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => { throw new TypeError("Failed to fetch"); }));
+    const err = await api.vault().catch((e) => e);
+    expect(err).toBeInstanceOf(ApiError);
+    expect(err).toMatchObject({ status: 0, message: "Can't reach the lending API. Check that it is running, then retry." });
+  });
+
   it("sends the broker key only once it is set", async () => {
     const fetch = reply(200, []);
     vi.stubGlobal("fetch", fetch);

@@ -286,7 +286,7 @@ function CoverPanel({
         <div className="dialog-scrim" onMouseDown={(event) => event.target === event.currentTarget && !pendingAction && setAction(null)}>
           <form className="confirm-dialog cover-dialog" onSubmit={submit} role="alertdialog" aria-modal="true" aria-labelledby="cover-dialog-title" onKeyDown={(event) => event.key === "Escape" && !pendingAction && setAction(null)}>
             <h3 id="cover-dialog-title">{action === "deposit" ? "Deposit first-loss cover" : "Withdraw first-loss cover"}</h3>
-            <p>{action === "deposit" ? "Add broker capital to protect depositors." : "Review the remaining cover before confirming this withdrawal."}</p>
+            <p>{action === "deposit" ? "Add broker capital to protect lenders." : "Review the remaining cover before confirming this withdrawal."}</p>
             <label htmlFor="cover-amount">Amount (XRP)</label>
             <input id="cover-amount" type="number" min="0.01" step="0.01" inputMode="decimal" autoFocus value={amount} onChange={(event) => setAmount(event.target.value)} disabled={pendingAction !== null} />
             <dl className="confirm-terms cover-preview">
@@ -318,7 +318,7 @@ function RevenuePanel({ snapshot }: { snapshot: BrokerSnapshot }) {
         <div><dt>Fee rate</dt><dd className="num">{formatPercent(snapshot.feeRate, 0)}</dd></div>
         <div><dt>Interest collected</dt><dd className="num">{formatMoney(snapshot.interestCollected)}</dd></div>
         <div><dt>Platform fee earned</dt><dd className="num">{formatMoney(snapshot.platformFee)}</dd></div>
-        <div><dt>Depositor share</dt><dd className="num">{formatMoney(snapshot.interestCollected - snapshot.platformFee)}</dd></div>
+        <div><dt>Lender share</dt><dd className="num">{formatMoney(snapshot.interestCollected - snapshot.platformFee)}</dd></div>
         <div><dt>Projected active-loan fee</dt><dd className="num">{snapshot.projectedFee === null ? "—" : formatMoney(snapshot.projectedFee)}</dd></div>
       </dl>
       {feesPaused ? <div className="revenue-warning">Fees are not charged while first-loss cover is below the required minimum.</div> : null}

@@ -7,7 +7,7 @@ const byRole = (role: string) => wallets.find((w) => w.role === role)!;
 
 describe("wallet", () => {
   it("offers the five user wallets in demo order, never the broker", () => {
-    expect(userWallets(wallets).map((w) => w.label)).toEqual(["Depositor", "Alice", "Carol", "Bob", "Mallory"]);
+    expect(userWallets(wallets).map((w) => w.label)).toEqual(["Lender", "Alice", "Carol", "Bob", "Mallory"]);
   });
 
   it("restores the saved wallet", () => {

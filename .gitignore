@@ -1,44 +1,13 @@
-# Secrets — never commit wallet seeds or keys
+node_modules/
+dist/
+
+# Secrets: Devnet wallet seeds, broker key
 .env
-.env.*
-!.env.example
-*.pem
-*.key
-secrets/
-wallets/
-*.seed
 wallets.json
 
-# App state (SQLite audit log, ledger state)
+# Local state: SQLite audit log, ledger vault/broker IDs
 *.db
 *.db-journal
 state.json
 
-# Node / pnpm / Vite / xrpl.js
-node_modules/
-dist/
-build/
-.next/
-out/
-coverage/
-*.tsbuildinfo
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-.npm/
-.turbo/
-.vercel/
-
-# Editors / OS
-.vscode/*
-!.vscode/settings.json
-!.vscode/extensions.json
-.idea/
 .DS_Store
-Thumbs.db
-*.swp
-
-# Logs
-logs/
-*.log

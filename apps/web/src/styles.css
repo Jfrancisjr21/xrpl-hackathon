@@ -1,0 +1,60 @@
+/* The shell and the user screens (depositor, borrower). Colours, radii and type come from the tokens in app.css. */
+
+.shell-bar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0 24px;
+  padding: 0 24px; background: var(--ground); border-bottom: 1px solid var(--border);
+}
+.shell-tabs { display: flex; gap: 20px; align-self: stretch; }
+.shell-tab {
+  height: 52px; padding: 0; margin-bottom: -1px; background: none; border: 0; border-bottom: 2px solid transparent;
+  font-size: 14px; font-weight: 500; color: var(--muted); cursor: pointer;
+}
+.shell-tab:hover { color: var(--text); }
+.shell-tab[aria-current="page"] { color: var(--text); border-bottom-color: var(--text); }
+.shell-net { margin-left: auto; font-size: 12px; color: var(--muted); }
+.shell-main { max-width: 1100px; margin: 0 auto; padding: 32px 24px 64px; }
+
+.screen { display: grid; gap: 16px; color: var(--text); }
+.screen h1 { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -.01em; }
+.lead { margin: 0; max-width: 70ch; color: var(--muted); font-size: 15px; line-height: 1.5; }
+.hint { margin: 0; color: var(--muted); font-size: 14px; }
+
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-card); padding: var(--pad); }
+.card h2 { margin: 0 0 8px; font-size: 16px; font-weight: 500; }
+.card p { margin: 0; }
+
+.phase { padding: 12px 16px; border-radius: var(--radius-control); background: var(--pill-neutral-bg); color: var(--pill-neutral-ink); font-size: 14px; }
+.phase--open { background: var(--pill-positive-bg); color: var(--pill-positive-ink); }
+
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-card); }
+.stat { display: grid; gap: 4px; padding: 20px var(--pad); }
+.stat + .stat { border-left: 1px solid var(--border); }
+.stat span { font-size: 12px; color: var(--muted); }
+.stat b { font-size: 24px; font-weight: 500; }
+.stat small { font-size: 13px; font-weight: 400; color: var(--muted); }
+
+.error { padding: 10px 12px; border-radius: var(--radius-control); background: var(--pill-negative-bg); color: var(--pill-negative-ink); font-size: 14px; }
+.receipt { margin: 0; padding: 8px 12px; border-radius: var(--radius-control); background: var(--pill-positive-bg); color: var(--pill-positive-ink); font-size: 13px; }
+.receipt a { color: inherit; }
+
+.picker { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--gap); }
+.persona {
+  display: grid; gap: 6px; align-content: start; justify-items: start; padding: 16px; text-align: left;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-card); color: var(--text); cursor: pointer;
+}
+.persona:hover { border-color: var(--control); }
+.persona[aria-pressed="true"] { border-color: var(--text); outline: 1px solid var(--text); }
+.persona b { font-size: 15px; font-weight: 600; }
+.persona .desc { font-size: 13px; color: var(--muted); }
+.persona code { font-size: 12px; color: var(--muted); }
+
+@media (max-width: 760px) {
+  .picker { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stats { grid-template-columns: minmax(0, 1fr); }
+  .stat + .stat { border-left: 0; border-top: 1px solid var(--border); }
+}
+@media (max-width: 640px) {
+  .shell-bar, .shell-main { padding-left: 16px; padding-right: 16px; }
+  .shell-net { margin-left: 0; width: 100%; padding-bottom: 10px; }
+  .shell-tab { height: 48px; }
+}

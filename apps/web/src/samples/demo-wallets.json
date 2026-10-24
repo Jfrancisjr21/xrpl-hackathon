@@ -1,0 +1,10 @@
+[
+  { "role": "issuer", "label": "Issuer", "address": "rd3uVZqSdQ71SEqWVcKBCzWZrkDMCMP8rn" },
+  { "role": "broker", "label": "Broker", "address": "rJbB4E98rQMAVjh2FFLhVhoer2Q26pLpWV" },
+  { "role": "depositor", "label": "Depositor", "address": "r8AqjCgQk98JKVvZQittEGu8XPJAakMcHB" },
+  { "role": "agent", "label": "Agent", "address": "rooQgNKnf5egfNBUZtiEAuPQTenqvPfsE6" },
+  { "role": "alice", "label": "Alice", "address": "r82eGxR3UNRT8m37GYSvJt8yJPNsicR1SS", "description": "Long history and a verified credential" },
+  { "role": "carol", "label": "Carol", "address": "r3j7JDENy5vhfTNE68uqt8iLVTiTJtHMiX", "description": "Mid-range history, verified" },
+  { "role": "bob", "label": "Bob", "address": "rzqCVxHfv9ym1rBS6hpgCuxBGFERTT8azD", "description": "New account with a thin file" },
+  { "role": "borrower", "label": "Mallory", "address": "riEvqzfvziy7y9dcDimBV2MFeKn6quzNrw", "description": "Address on the demo sanctions list" }
+]

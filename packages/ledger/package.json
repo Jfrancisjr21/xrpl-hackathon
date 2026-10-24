@@ -7,14 +7,12 @@
   "types": "src/index.ts",
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
-    "wallets:test": "tsx src/scripts/wallets-test.ts",
-    "asset:test": "tsx src/scripts/asset-test.ts",
-    "vault:test": "tsx src/scripts/vault-test.ts",
-    "broker:test": "tsx src/scripts/broker-test.ts",
-    "loan:test": "tsx src/scripts/loan-test.ts",
-    "loan:lifecycle": "tsx src/scripts/loan-lifecycle-test.ts",
+    "fund-wallets": "tsx src/scripts/fund-wallets.ts",
+    "check-wallets": "tsx src/scripts/check-wallets.ts",
     "bootstrap": "tsx src/scripts/bootstrap.ts",
-"lifecycle": "tsx src/scripts/lifecycle.ts"
+    "lifecycle": "tsx src/scripts/lifecycle.ts",
+    "new-vault": "tsx src/scripts/new-vault.ts"
+    
   },
   "devDependencies": {
     "tsx": "^4.23.15",

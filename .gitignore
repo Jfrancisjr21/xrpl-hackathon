@@ -11,3 +11,6 @@ wallets.json
 state.json
 
 .DS_Store
+
+# OFAC raw downloads (rebuild with sanctions:fetch)
+packages/risk/data/raw/

@@ -1,17 +1,16 @@
-import type { DemoWallet } from "@hack/shared";
+import { useWallet } from "../../lib/wallet";
 import { WalletPicker } from "./WalletPicker";
 
 // Phase 1 frame: pick a borrower. Phase 3 adds the application form, decision card and timeline; Phase 4 the loan.
-export function BorrowerScreen({ wallets, wallet, onSelect }: {
-  wallets: DemoWallet[];
-  wallet: DemoWallet | null;
-  onSelect: (w: DemoWallet) => void;
-}) {
+// The picker and the header switcher set the same active wallet.
+export function BorrowerScreen() {
+  const { wallets, wallet, setWallet } = useWallet();
+  const borrowing = wallet && wallet.role !== "depositor";
   return (
     <div className="screen">
       <h1>Borrow TSTUSD</h1>
-      <WalletPicker wallets={wallets} selected={wallet} onSelect={onSelect} />
-      {!wallet && <p className="hint">Pick a borrower to start.</p>}
+      <WalletPicker wallets={wallets} selected={borrowing ? wallet : null} onSelect={setWallet} />
+      {!borrowing && <p className="hint">Pick a borrower to start.</p>}
     </div>
   );
 }

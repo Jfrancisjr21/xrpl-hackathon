@@ -40,7 +40,7 @@ const q = (s: string | number) => encodeURIComponent(s);
 export const api = {
   health: () => read<HealthResponse>("/health", () => samples.health),
   wallets: () => read<DemoWallet[]>("/wallets", () => samples.wallets),
-  vault: (address?: string) => read<VaultView>("/vault" + (address ? `?address=${q(address)}` : ""), () => samples.vault),
+  vault: (address?: string) => read<VaultView>("/vault" + (address ? `?address=${q(address)}` : ""), () => samples.vaultFor(address)),
   deposit: (address: string, amount: string) => post<TxResult>("/vault/deposit", { address, amount }),
   withdraw: (address: string, amount: string) => post<TxResult>("/vault/withdraw", { address, amount }),
   apply: (body: LoanApplicationInput) => post<ApplicationView>("/applications", body),

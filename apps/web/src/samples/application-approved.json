@@ -1,0 +1,28 @@
+{
+  "id": 1,
+  "borrowerAddress": "r82eGxR3UNRT8m37GYSvJt8yJPNsicR1SS",
+  "amount": "500",
+  "paymentTotal": 6,
+  "status": "active",
+  "decision": {
+    "approved": true,
+    "sanctions": { "blocked": false },
+    "facts": { "ageDays": 420, "txCountSample": 120, "trustlineCount": 4, "hasCredential": true },
+    "featureSource": "demo-profile",
+    "score": { "age": 30, "activity": 18, "trustlines": 20, "credential": 20, "total": 88 },
+    "minScore": 50,
+    "interestRate": 7400,
+    "reasons": ["Score 88 is above the minimum of 50", "Holds a verified credential"],
+    "explanation": "Alice has a long account history and a verified credential, so the agent approved her at 7.4%.",
+    "explanationSource": "template"
+  },
+  "decisionHash": "d228541a84edae7de69e3f193adaa6b404f28a8d1ca67ea34a9b4efc6470fd26",
+  "loanId": "D22500AA9F831D5A9502D83D54214DA01B0F3C3C4CAD58F3927BCB459C8FE946",
+  "tx": {
+    "hash": "BE41973AA0860DAE0EE91534157F4248D580E2449616BE7C0D8CDFB896D87325",
+    "result": "tesSUCCESS",
+    "explorerUrl": "https://devnet.xrpl.org/transactions/BE41973AA0860DAE0EE91534157F4248D580E2449616BE7C0D8CDFB896D87325"
+  },
+  "createdAt": "2026-10-24T15:05:00Z",
+  "updatedAt": "2026-10-24T15:06:00Z"
+}

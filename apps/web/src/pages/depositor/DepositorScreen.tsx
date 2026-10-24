@@ -1,17 +1,19 @@
-import type { DemoWallet, VaultView } from "@hack/shared";
+import type { VaultView } from "@hack/shared";
 import { api } from "../../lib/api";
 import { usePoll } from "../../lib/hooks";
+import { useWallet } from "../../lib/wallet";
 import { amount } from "../../lib/format";
 import { ErrorBanner } from "../../components/ErrorBanner";
 import { PhaseBanner } from "../../components/PhaseBanner";
 import { Stat } from "../../components/Stat";
 
-// Phase 1 frame: the vault and this wallet's position. Phase 2 adds the deposit and withdraw forms.
-export function DepositorScreen({ wallet }: { wallet: DemoWallet | null }) {
+// Phase 1 frame: the vault and the active wallet's position. Phase 2 adds the deposit and withdraw forms.
+export function DepositorScreen() {
+  const { wallet } = useWallet();
   const vault = usePoll<VaultView>(() => api.vault(wallet?.address), [wallet?.address]);
 
   if (vault.loading && !vault.data) return <p className="hint">Loading the vault…</p>;
-  if (!vault.data || !wallet) return <ErrorBanner error={vault.error ?? "No depositor wallet"} onRetry={vault.refresh} />;
+  if (!vault.data || !wallet) return <ErrorBanner error={vault.error ?? "No wallet to act as"} onRetry={vault.refresh} />;
   const v = vault.data;
 
   return (
@@ -26,7 +28,7 @@ export function DepositorScreen({ wallet }: { wallet: DemoWallet | null }) {
         <Stat label="Lent out" value={`${v.utilizationPct.toFixed(1)}%`} />
       </div>
       <section className="card" aria-label="Your position">
-        <h2>Your position</h2>
+        <h2>{wallet.label}'s position</h2>
         <p className="num">{amount(v.position?.deposited)} {v.assetLabel} · {(v.position?.sharePct ?? 0).toFixed(1)}% of the vault</p>
       </section>
     </div>

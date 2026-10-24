@@ -40,6 +40,8 @@ export interface LoanView {
   gracePeriodSeconds: number;
   status: LoanStatus;
   txHash?: string;
+  canImpair?: boolean;
+  canDefault?: boolean;
 }
 
 export interface AuditEntry {
@@ -61,7 +63,7 @@ export interface BrokerSnapshot {
   vaultPhase: "subscription" | "investment" | "redemption";
   interestCollected: number;
   platformFee: number;
-  projectedFee: number;
+  projectedFee: number | null;
   feeRate: number;
   revenueSource: "measured" | "estimated";
 }
@@ -199,10 +201,11 @@ export function loanPermissions(loan: LoanView, now = Date.now()): LoanPermissio
   const isLate = overdueSeconds > 0;
 
   return {
-    canImpair: loan.status === "active" && isLate,
-    canDefault:
+    canImpair: loan.canImpair ?? (loan.status === "active" && isLate),
+    canDefault: loan.canDefault ?? (
       (loan.status === "active" || loan.status === "impaired") &&
-      overdueSeconds >= loan.gracePeriodSeconds,
+      overdueSeconds >= loan.gracePeriodSeconds
+    ),
     canUnimpair: loan.status === "impaired",
     canDelete: loan.status === "paid" || loan.status === "defaulted",
     overdueSeconds,

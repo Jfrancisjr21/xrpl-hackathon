@@ -3,12 +3,12 @@ import type { Server } from "node:http";
 import express from "express";
 import { ApplicationIdParam, ApplicationQuery, LoanApplicationInput } from "@hack/shared";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { LedgerNotReadyError } from "@hack/ledger";
 import { OpenApplicationError } from "./db/db";
 import { errorHandler, HttpError, onLedger, requireBrokerKey, validate } from "./middleware";
 
 const KEY = "test-broker-key-123";
 const ALICE = "rByhcLgLG7rzJ2ceqzJgM4bFjuQodSrYFb";
-class FakeNotReady extends Error { constructor(m: string, public opensAt: string | null) { super(m); } }
 
 let server: Server;
 let base = "";
@@ -23,7 +23,7 @@ beforeAll(async () => {
   app.post("/broker", requireBrokerKey, (_req, res) => res.json({ ok: true }));
   app.get("/missing", () => { throw new HttpError(404, "Application 7 not found"); });
   app.get("/open", () => { throw new OpenApplicationError("already open"); });
-  app.get("/not-ready", () => onLedger(async () => { throw new FakeNotReady("Loans open when the deposit window closes", "2026-10-24T15:35:00.000Z"); }));
+  app.get("/not-ready", () => onLedger(async () => { throw new LedgerNotReadyError("Loans open when the deposit window closes", "2026-10-24T15:35:00.000Z"); }));
   app.get("/refused", () => onLedger(async () => { throw new Error("LoanSet failed with tecINSUFFICIENT_FUNDS"); }));
   app.get("/bug", () => { throw new Error("oops"); });
   app.use(errorHandler);

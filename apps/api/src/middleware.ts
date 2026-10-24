@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import type { ErrorRequestHandler, RequestHandler } from "express";
 import { z } from "zod";
+import { LedgerNotReadyError } from "@hack/ledger";
 import type { ErrorResponse } from "@hack/shared";
 import { OpenApplicationError } from "./db/db";
 
@@ -17,14 +18,10 @@ export async function onLedger<T>(call: () => Promise<T>): Promise<T> {
   try {
     return await call();
   } catch (e) {
-    if (isNotReady(e)) throw e; // keeps its 409
+    if (e instanceof LedgerNotReadyError) throw e; // keeps its 409
     throw new LedgerError(e instanceof Error ? e.message : String(e));
   }
 }
-
-// The ledger's LedgerNotReadyError (e.g. a loan during the deposit window) carries opensAt.
-// shortcut: matched by shape because @hack/ledger cannot be imported until Phase 5 merges; switch to instanceof then.
-const isNotReady = (e: unknown): e is Error & { opensAt: string | null } => e instanceof Error && "opensAt" in e;
 
 // zod issues -> { field: first message }, for ErrorResponse.fields.
 function fieldErrors(error: z.ZodError): Record<string, string> {
@@ -68,7 +65,7 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
 
   if (err instanceof HttpError) return send(err.status, { error: err.message, ...err.extra });
   if (err instanceof OpenApplicationError) return send(409, { error: err.message });
-  if (isNotReady(err)) return send(409, { error: err.message, opensAt: err.opensAt });
+  if (err instanceof LedgerNotReadyError) return send(409, { error: err.message, opensAt: err.opensAt }); // e.g. a loan during the deposit window
   if (err instanceof LedgerError) return send(502, { error: `The ledger refused or did not respond: ${err.message}` });
   if (err instanceof z.ZodError) return send(400, { error: "Invalid data", fields: fieldErrors(err) });
   if ((err as { type?: string }).type === "entity.parse.failed") return send(400, { error: "Request body is not valid JSON" });

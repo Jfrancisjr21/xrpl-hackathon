@@ -1,16 +1,16 @@
 import cors from "cors";
 import express from "express";
-import type { HealthResponse } from "@hack/shared";
+import type { LedgerService } from "@hack/ledger";
+import type { HealthResponse, VaultPhase } from "@hack/shared";
 import type { Db } from "./db/db";
 import { errorHandler } from "./middleware";
 import { applicationsRouter } from "./routes/applications";
-import type { ApiLedger } from "./services/ledger";
 import type { Underwrite } from "./services/underwriting";
 
-// Everything a route needs. index.ts passes the real ones; tests pass fakes.
+// Everything a route needs. index.ts passes the real ones (XrplLedger); tests pass fakes.
 export interface Deps {
   db: Db;
-  ledger: ApiLedger;
+  ledger: LedgerService;
   underwrite: Underwrite;
 }
 
@@ -21,12 +21,17 @@ export function createApp(deps: Deps) {
   app.use(cors({ origin: process.env.CORS_ORIGIN }));
   app.use(express.json());
 
-  app.get("/api/health", (_req, res) => {
+  app.get("/api/health", async (_req, res) => {
+    // Health must always answer, so a missing vault or a dropped connection shows as vaultPhase: null.
+    let vaultPhase: VaultPhase | null = null;
+    try {
+      vaultPhase = (await deps.ledger.getVault()).phase;
+    } catch { /* not bootstrapped or ledger unreachable */ }
     const body: HealthResponse = {
       ok: true,
       mockMode: process.env.MOCK_MODE === "true",
       network: network(process.env.XRPL_URL),
-      vaultPhase: deps.ledger.getVaultPhase(),
+      vaultPhase,
     };
     res.json(body);
   });

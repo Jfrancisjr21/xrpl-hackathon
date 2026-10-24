@@ -1,14 +1,17 @@
 import "dotenv/config";
+import { XrplLedger } from "@hack/ledger";
 import { createApp } from "./app";
 import { openDb } from "./db/db";
-import { localLedger } from "./services/ledger";
 import { placeholderUnderwrite } from "./services/underwriting";
 
-let ledger;
+const ledger = new XrplLedger();
 try {
-  ledger = localLedger();
+  await ledger.init(); // connects to XRPL_URL and loads wallets.json
+  console.log("bootstrapping the ledger (first run creates the vault and broker, about 2 minutes)...");
+  const ids = await ledger.bootstrap(); // idempotent: later starts reuse state.json
+  console.log("ledger ready", ids);
 } catch (e) {
-  console.error(`Cannot start: ${(e as Error).message}`); // e.g. wallets.json missing
+  console.error(`Cannot start: ${(e as Error).message}`); // e.g. wallets.json missing, Devnet unreachable or reset
   process.exit(1);
 }
 

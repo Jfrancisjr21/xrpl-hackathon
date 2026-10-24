@@ -4,7 +4,7 @@ import { ApplicationView, DemoWallet, ErrorResponse, HealthResponse, type Decisi
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "../app";
 import { openDb, setConfig, type Db } from "../db/db";
-import type { ApiLedger } from "../services/ledger";
+import type { LedgerService } from "@hack/ledger";
 import type { Underwrite } from "../services/underwriting";
 
 const KEY = "test-broker-key-123";
@@ -12,13 +12,14 @@ const ALICE = "rByhcLgLG7rzJ2ceqzJgM4bFjuQodSrYFb";
 const BOB = "rGgZFNrAko9bofdegqwMq2TxLVyXJnUn95";
 const STRANGER = "rnXyVQzgxZe7TR1EPzTkGj2jxH4LMJYh66";
 
-const fakeLedger: ApiLedger = {
+// Only what these routes call; any other method would throw if a route used it by mistake.
+const fakeLedger = {
   getWallets: () => [
     { role: "alice", label: "Alice", address: ALICE, description: "Strong profile" },
     { role: "bob", label: "Bob", address: BOB },
   ],
-  getVaultPhase: () => "subscription",
-};
+  getVault: async () => ({ phase: "subscription" }),
+} as unknown as LedgerService;
 const decision = (approved: boolean): Decision => ({
   approved, sanctions: { blocked: false }, facts: null, featureSource: null, score: null, minScore: 50,
   interestRate: approved ? 7400 : null, reasons: [approved ? "ok" : "no"], explanation: "x", explanationSource: "template",

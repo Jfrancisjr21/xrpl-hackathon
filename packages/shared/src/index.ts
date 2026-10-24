@@ -8,7 +8,7 @@ export * from "./fees";
 export const Amount = z.string().regex(/^\d+(\.\d+)?$/, "must be a decimal string like \"273.97\"");
 export type Amount = z.infer<typeof Amount>;
 
-// A positive whole-number string like "500", for amounts users send. TSTUSD is an MPT, and MPT amounts are integers.
+// A positive whole-number string like "500", for amounts users send. The vault asset is a Devnet test MPT shown as simulated XRP; MPT amounts are integers.
 export const AmountInput = z.string().regex(/^[1-9]\d*$/, "must be a whole number like \"500\"");
 export type AmountInput = z.infer<typeof AmountInput>;
 
@@ -89,7 +89,7 @@ export type DepositorPosition = z.infer<typeof DepositorPosition>;
 // GET /api/vault. Mirrors the ledger's VaultSnapshot; position is added when the caller passes ?address=.
 export const VaultView = z.object({
   vaultId: LedgerId,
-  assetLabel: z.string(), // "TSTUSD"
+  assetLabel: z.string(), // "XRP" (simulated on Devnet)
   assetsTotal: Amount,
   assetsAvailable: Amount, // not lent out
   lossUnrealized: Amount, // at risk on impaired loans

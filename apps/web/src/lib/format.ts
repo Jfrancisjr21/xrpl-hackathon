@@ -18,5 +18,5 @@ export function secondsUntil(iso: string | null | undefined, now = Date.now()) {
   return Number.isNaN(t) ? null : Math.round((t - now) / 1000);
 }
 
-/** What a user may send: a whole number of TSTUSD, as the contract's AmountInput requires (MPT amounts are integers). */
+/** What a user may send: a whole number of (simulated) XRP, as the contract's AmountInput requires (MPT amounts are integers). */
 export const isAmount = (s: string) => AmountInput.safeParse(s).success;

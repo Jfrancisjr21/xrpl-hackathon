@@ -8,7 +8,7 @@ export function BorrowerScreen() {
   const borrowing = wallet && wallet.role !== "depositor";
   return (
     <div className="screen">
-      <h1>Borrow TSTUSD</h1>
+      <h1>Borrow simulated XRP</h1>
       <WalletPicker wallets={wallets} selected={borrowing ? wallet : null} onSelect={setWallet} />
       {!borrowing && <p className="hint">Pick a borrower to start.</p>}
     </div>

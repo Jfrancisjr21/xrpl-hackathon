@@ -1,0 +1,13 @@
+{
+  "name": "xrpl-lending",
+  "private": true,
+  "packageManager": "pnpm@10.28.0",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "dev": "pnpm --parallel --filter @hack/api --filter @hack/web dev",
+    "dev:api": "pnpm --filter @hack/api dev",
+    "dev:web": "pnpm --filter @hack/web dev",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r --if-present test"
+  }
+}

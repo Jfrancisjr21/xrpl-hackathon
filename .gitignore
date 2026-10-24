@@ -1,0 +1,44 @@
+# Secrets — never commit wallet seeds or keys
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+wallets/
+*.seed
+wallets.json
+
+# App state (SQLite audit log, ledger state)
+*.db
+*.db-journal
+state.json
+
+# Node / pnpm / Vite / xrpl.js
+node_modules/
+dist/
+build/
+.next/
+out/
+coverage/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.npm/
+.turbo/
+.vercel/
+
+# Editors / OS
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+
+# Logs
+logs/
+*.log

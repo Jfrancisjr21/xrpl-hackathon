@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
+import { CopyButton } from "../../components/CopyButton";
 import { StatusBadge } from "../../components/StatusBadge";
 import { api, setBrokerKey as setApiBrokerKey } from "../../lib/api";
 import {
@@ -140,6 +141,16 @@ function BrokerSkeleton() {
         ))}
       </div>
     </div>
+  );
+}
+
+function LiveSectionUnavailable({ title, detail, onOpenApplications }: { title: string; detail: string; onOpenApplications?: () => void }) {
+  return (
+    <section className="panel unavailable-panel" role="status">
+      <h2>{title}</h2>
+      <p>{detail}</p>
+      {onOpenApplications ? <button className="button button--secondary" type="button" onClick={onOpenApplications}>Open live applications</button> : null}
+    </section>
   );
 }
 
@@ -462,11 +473,19 @@ function ApplicationDetail({
           </div>
         ) : <div className="empty-state">Scoring stopped at the sanctions gate.</div>}
       </section>
+      {application.brokerNote || application.error ? (
+        <section className="detail-section outcome-section">
+          <h3>{application.error ? "Origination failure" : "Broker note"}</h3>
+          <p>{application.error ?? application.brokerNote}</p>
+        </section>
+      ) : null}
       <section className="detail-section receipt-section">
         <h3>Decision receipt</h3>
-        {application.decisionMemoTx ? (
-          <a href={explorerUrl(application.decisionMemoTx)} target="_blank" rel="noreferrer">Open LoanSet memo on XRPL Explorer</a>
-        ) : <p>The explorer link appears after LoanSet is confirmed.</p>}
+        <dl className="receipt-list">
+          <div><dt>Decision hash</dt><dd>{application.decisionHash ? <><code title={application.decisionHash}>{shortId(application.decisionHash)}</code><CopyButton text={application.decisionHash} /></> : "—"}</dd></div>
+          <div><dt>Loan ID</dt><dd>{application.loanId ? <code title={application.loanId}>{shortId(application.loanId)}</code> : "—"}</dd></div>
+          <div><dt>Ledger transaction</dt><dd>{application.txHash ? <a href={explorerUrl(application.txHash)} target="_blank" rel="noreferrer">Open in XRPL Explorer</a> : "—"}</dd></div>
+        </dl>
       </section>
       {error ? <div className="inline-error" role="alert">{error}</div> : null}
       {pendingDecision ? (
@@ -512,23 +531,27 @@ function ApplicationsView({
   selected,
   note,
   error,
+  loadError,
   pendingDecision,
   onSelect,
   onNote,
   onApprove,
   onReject,
   onClose,
+  onRetry,
 }: {
   applications: ApplicationView[];
   selected: ApplicationView | null;
   note: string;
   error: string | null;
+  loadError: string | null;
   pendingDecision: ApplicationDecision | null;
   onSelect: (application: ApplicationView) => void;
   onNote: (value: string) => void;
   onApprove: () => void;
   onReject: () => void;
   onClose: () => void;
+  onRetry: () => void;
 }) {
   const [filter, setFilter] = useState<ApplicationFilter>("pending_review");
   const visibleApplications = filterApplications(applications, filter);
@@ -537,6 +560,7 @@ function ApplicationsView({
   return (
     <div className={`split-view ${selected ? "split-view--detail" : ""}`}>
       <Panel title="Application queue" action={<span className="queue-count">{formatNumber(visibleApplications.length)} shown</span>} className="list-pane">
+        {loadError ? <div className="block-error" role="alert"><span>{loadError}</span><button className="text-button" type="button" onClick={onRetry}>Retry</button></div> : null}
         <div className="filter-row">
           <button className={`filter-button ${filter === "pending_review" ? "filter-button--active" : ""}`} type="button" aria-pressed={filter === "pending_review"} onClick={() => setFilter("pending_review")}>Pending review ({formatNumber(pendingCount)})</button>
           <button className={`filter-button ${filter === "all" ? "filter-button--active" : ""}`} type="button" aria-pressed={filter === "all"} onClick={() => setFilter("all")}>All applications ({formatNumber(applications.length)})</button>
@@ -761,15 +785,16 @@ function AgentView({
 
 export function BrokerApp() {
   const previewFromUrl = new URLSearchParams(window.location.search).get("preview") === "1";
+  const startsWithSamples = sampleMode || previewFromUrl;
   const [brokerKey, setBrokerKey] = useState(() => sessionStorage.getItem("xrpl-broker-key") ?? "");
   const [preview, setPreview] = useState(previewFromUrl);
   const [tab, setTab] = useState<BrokerTab>("overview");
   const [menuOpen, setMenuOpen] = useState(false);
-  const [applications, setApplications] = useState(demoApplications);
-  const [loans, setLoans] = useState(demoLoans);
+  const [applications, setApplications] = useState(() => startsWithSamples ? demoApplications : []);
+  const [loans, setLoans] = useState(() => startsWithSamples ? demoLoans : []);
   const [snapshot, setSnapshot] = useState(demoSnapshot);
   const [agent, setAgent] = useState(demoAgent);
-  const [audit, setAudit] = useState(demoAudit);
+  const [audit, setAudit] = useState(() => startsWithSamples ? demoAudit : []);
   const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null);
   const [selectedLoanId, setSelectedLoanId] = useState<string | null>(null);
   const [reviewNote, setReviewNote] = useState("");
@@ -783,46 +808,70 @@ export function BrokerApp() {
   const [policyNotice, setPolicyNotice] = useState<string | null>(null);
   const [delegationNotice, setDelegationNotice] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [initializing, setInitializing] = useState(() => !sampleMode && Boolean(sessionStorage.getItem("xrpl-broker-key")));
+  const [initializing, setInitializing] = useState(() => !startsWithSamples && Boolean(sessionStorage.getItem("xrpl-broker-key")));
+  const [applicationsError, setApplicationsError] = useState<string | null>(null);
+  const [supportingDataAvailable, setSupportingDataAvailable] = useState(startsWithSamples);
+  const [supportingError, setSupportingError] = useState<string | null>(null);
   const [alertCheckedAt, setAlertCheckedAt] = useState(() => Date.now());
   const [alertError, setAlertError] = useState<string | null>(null);
-  const [alerts, setAlerts] = useState<AlertView[]>([{ loanId: "LN-2308", message: "Payment overdue" }]);
+  const [alerts, setAlerts] = useState<AlertView[]>(() => startsWithSamples ? [{ loanId: "LN-2308", message: "Payment overdue" }] : []);
 
   const selectedApplication = applications.find((application) => application.id === selectedApplicationId) ?? null;
   const selectedLoan = loans.find((loan) => loan.id === selectedLoanId) ?? null;
   const pendingCount = applications.filter((application) => application.status === "pending_review").length;
+
+  const refreshApplications = useCallback(async () => {
+    if (sampleMode || preview || !brokerKey) return;
+    try {
+      setApiBrokerKey(brokerKey);
+      const nextApplications = await api.applications();
+      setApplications(nextApplications.map(applicationFromContract));
+      setApplicationsError(null);
+    } catch (error) {
+      setApplicationsError(error instanceof Error ? error.message : "Could not load applications.");
+    }
+  }, [brokerKey, preview]);
+
+  const refreshSupportingData = useCallback(async () => {
+    if (sampleMode || preview || !brokerKey) return;
+    try {
+      setApiBrokerKey(brokerKey);
+      const [broker, revenue, vault, nextLoans, nextAgent, nextAudit, nextAlerts] = await Promise.all([
+        api.broker(),
+        api.revenue(),
+        api.vault(),
+        api.loans(),
+        api.agent(),
+        api.audit(),
+        api.alerts(),
+      ]);
+      setSnapshot(snapshotFromContract(broker, revenue, vault));
+      setLoans(nextLoans.map(loanFromContract));
+      setAgent(agentFromContract(nextAgent));
+      setAudit(nextAudit.map(auditFromContract));
+      setAlerts(nextAlerts.map(alertFromContract));
+      setSupportingDataAvailable(true);
+      setSupportingError(null);
+      setAlertError(null);
+      setAlertCheckedAt(Date.now());
+    } catch {
+      setSupportingDataAvailable(false);
+      setSupportingError("The remaining broker endpoints are not connected yet. The application queue loads independently.");
+    }
+  }, [brokerKey, preview]);
 
   const refreshBrokerData = useCallback(async () => {
     if (sampleMode || preview || !brokerKey) {
       setInitializing(false);
       return;
     }
-
-    setApiBrokerKey(brokerKey);
-    const [broker, revenue, vault, nextApplications, nextLoans, nextAgent, nextAudit, nextAlerts] = await Promise.all([
-      api.broker(),
-      api.revenue(),
-      api.vault(),
-      api.applications(),
-      api.loans(),
-      api.agent(),
-      api.audit(),
-      api.alerts(),
-    ]);
-    setSnapshot(snapshotFromContract(broker, revenue, vault));
-    setApplications(nextApplications.map(applicationFromContract));
-    setLoans(nextLoans.map(loanFromContract));
-    setAgent(agentFromContract(nextAgent));
-    setAudit(nextAudit.map(auditFromContract));
-    setAlerts(nextAlerts.map(alertFromContract));
-    setAlertCheckedAt(Date.now());
-    setAlertError(null);
+    await Promise.all([refreshApplications(), refreshSupportingData()]);
     setInitializing(false);
-  }, [brokerKey, preview]);
+  }, [brokerKey, preview, refreshApplications, refreshSupportingData]);
 
   const pollAlerts = useCallback(async () => {
     setAlertCheckedAt(Date.now());
-    if (sampleMode || preview) {
+    if (sampleMode || preview || !supportingDataAvailable) {
       setAlertError(null);
       setInitializing(false);
       return;
@@ -837,16 +886,13 @@ export function BrokerApp() {
     } finally {
       setInitializing(false);
     }
-  }, [brokerKey, preview]);
+  }, [brokerKey, preview, supportingDataAvailable]);
 
   useEffect(() => {
     if (!brokerKey && !preview) return;
 
     const initialPoll = window.setTimeout(() => {
-      void refreshBrokerData().catch((error: unknown) => {
-        setAlertError(error instanceof Error ? error.message : "Could not load broker data.");
-        setInitializing(false);
-      });
+      void refreshBrokerData();
     }, 0);
     const interval = window.setInterval(() => void pollAlerts(), 10_000);
     return () => {
@@ -869,6 +915,15 @@ export function BrokerApp() {
   }
 
   function openPreview() {
+    setApplications(demoApplications);
+    setLoans(demoLoans);
+    setSnapshot(demoSnapshot);
+    setAgent(demoAgent);
+    setAudit(demoAudit);
+    setAlerts([{ loanId: "LN-2308", message: "Payment overdue" }]);
+    setApplicationsError(null);
+    setSupportingError(null);
+    setSupportingDataAvailable(true);
     setInitializing(false);
     setPreview(true);
     window.history.replaceState(null, "", "/broker?preview=1");
@@ -916,16 +971,18 @@ export function BrokerApp() {
     try {
       await runAction(async () => {
         if (!sampleMode && !preview) {
-          await api.approve(Number(application.id));
-          await refreshBrokerData();
+          const updated = await api.approve(Number(application.id));
+          const view = applicationFromContract(updated);
+          setApplications((current) => current.map((item) => item.id === view.id ? view : item));
           return;
         }
-        setApplications((current) => current.map((item) => item.id === application.id ? { ...item, status: "approved" } : item));
+        setApplications((current) => current.map((item) => item.id === application.id ? { ...item, status: "active" } : item));
         setAudit((current) => [{ id: `AUD-${Date.now()}`, at: new Date().toISOString(), actor: "broker", action: "Application approved", subject: application.id, reason: reviewNote || "Broker approved agent recommendation" }, ...current]);
       });
     } catch (error) {
       setApplications((current) => current.map((item) => item.id === application.id ? { ...item, status: "pending_review" } : item));
       setActionError(error instanceof Error ? error.message : "Could not approve this application.");
+      if (!sampleMode && !preview) await refreshApplications();
     } finally {
       setPendingDecision(null);
     }
@@ -944,15 +1001,17 @@ export function BrokerApp() {
     try {
       await runAction(async () => {
         if (!sampleMode && !preview) {
-          await api.reject(Number(application.id), note);
-          await refreshBrokerData();
+          const updated = await api.reject(Number(application.id), note);
+          const view = applicationFromContract(updated);
+          setApplications((current) => current.map((item) => item.id === view.id ? view : item));
           return;
         }
-        setApplications((current) => current.map((item) => item.id === application.id ? { ...item, status: "rejected" } : item));
+        setApplications((current) => current.map((item) => item.id === application.id ? { ...item, status: "rejected", brokerNote: note } : item));
         setAudit((current) => [{ id: `AUD-${Date.now()}`, at: new Date().toISOString(), actor: "broker", action: "Rejected application", subject: application.id, reason: note }, ...current]);
       });
     } catch (error) {
       setActionError(error instanceof Error ? error.message : "Could not reject this application.");
+      if (!sampleMode && !preview) await refreshApplications();
     } finally {
       setPendingDecision(null);
     }
@@ -1149,28 +1208,32 @@ export function BrokerApp() {
             </button>
           ))}
         </nav>
-        <div className="sidebar-meta"><span className="signal-dot signal-dot--blue" />{preview || sampleMode ? "Sample XRP data" : "Live lending data"}<small>Alerts checked {formatDate(new Date(alertCheckedAt).toISOString())}</small></div>
+        <div className="sidebar-meta">
+          <span className="signal-dot signal-dot--blue" />
+          {preview || sampleMode ? "Sample XRP data" : applicationsError ? "Live data unavailable" : supportingDataAvailable ? "Live lending data" : "Live applications connected"}
+          <small>{supportingDataAvailable ? `Alerts checked ${formatDate(new Date(alertCheckedAt).toISOString())}` : "Remaining APIs pending"}</small>
+        </div>
       </aside>
       {menuOpen ? <button className="menu-scrim" type="button" aria-label="Close navigation" onClick={() => setMenuOpen(false)} /> : null}
       <main className="canvas">
         <header className="page-header">
           <div><h1>{tabs.find((item) => item.id === tab)?.label}</h1><p>{tab === "overview" ? finding : "Broker controls for the live XRPL lending flow."}</p></div>
-          <div className="freshness"><span>{refreshing ? "Updating…" : alertError ? "Needs attention" : "Up to date"}</span><button type="button" disabled={refreshing} onClick={() => void runAction(refreshBrokerData)}>Refresh</button></div>
+          <div className="freshness"><span>{refreshing ? "Updating…" : applicationsError || supportingError || alertError ? "Needs attention" : "Up to date"}</span><button type="button" disabled={refreshing} onClick={() => void runAction(refreshBrokerData)}>Refresh</button></div>
         </header>
         {initializing ? <BrokerSkeleton /> : (
           <>
-            {agent.running ? null : <div className="paused-banner">Agent paused: every application waits for you.</div>}
+            {supportingDataAvailable && !agent.running ? <div className="paused-banner">Agent paused: every application waits for you.</div> : null}
             <div hidden={tab !== "overview"}>
-              <Overview applications={applications} loans={loans} alerts={alerts} alertError={alertError} snapshot={snapshot} pendingCoverAction={pendingCoverAction} coverNotice={coverNotice} onApplication={openApplication} onLoan={openLoan} onNavigate={selectTab} onAdjustCover={adjustCover} onRefreshAlerts={() => void runAction(pollAlerts)} />
+              {supportingDataAvailable ? <Overview applications={applications} loans={loans} alerts={alerts} alertError={alertError} snapshot={snapshot} pendingCoverAction={pendingCoverAction} coverNotice={coverNotice} onApplication={openApplication} onLoan={openLoan} onNavigate={selectTab} onAdjustCover={adjustCover} onRefreshAlerts={() => void runAction(pollAlerts)} /> : <LiveSectionUnavailable title="Live overview is not available yet" detail={supportingError ?? "The remaining broker APIs have not been connected."} onOpenApplications={() => selectTab("applications")} />}
             </div>
             <div hidden={tab !== "applications"}>
-              <ApplicationsView applications={applications} selected={selectedApplication} note={reviewNote} error={actionError} pendingDecision={pendingDecision} onSelect={openApplication} onNote={setReviewNote} onApprove={() => void approveApplication()} onReject={() => void rejectApplication()} onClose={() => setSelectedApplicationId(null)} />
+              <ApplicationsView applications={applications} selected={selectedApplication} note={reviewNote} error={actionError} loadError={applicationsError} pendingDecision={pendingDecision} onSelect={openApplication} onNote={setReviewNote} onApprove={() => void approveApplication()} onReject={() => void rejectApplication()} onClose={() => setSelectedApplicationId(null)} onRetry={() => void runAction(refreshApplications)} />
             </div>
             <div hidden={tab !== "loans"}>
-              <LoansView loans={loans} selected={selectedLoan} error={actionError} pendingAction={pendingLoanAction} receipt={loanActionReceipt} onSelect={openLoan} onAction={(action) => void manageLoan(action)} onClose={() => setSelectedLoanId(null)} />
+              {supportingDataAvailable ? <LoansView loans={loans} selected={selectedLoan} error={actionError} pendingAction={pendingLoanAction} receipt={loanActionReceipt} onSelect={openLoan} onAction={(action) => void manageLoan(action)} onClose={() => setSelectedLoanId(null)} /> : <LiveSectionUnavailable title="Live loans are not available yet" detail={supportingError ?? "The loans API has not been connected."} />}
             </div>
             <div hidden={tab !== "agent"}>
-              <AgentView agent={agent} audit={audit} live={!sampleMode && !preview} pendingAction={pendingAgentAction} policyNotice={policyNotice} delegationNotice={delegationNotice} error={actionError} onToggle={toggleAgent} onSavePolicy={saveAgentPolicy} onToggleDelegation={toggleDelegation} />
+              {supportingDataAvailable ? <AgentView agent={agent} audit={audit} live={!sampleMode && !preview} pendingAction={pendingAgentAction} policyNotice={policyNotice} delegationNotice={delegationNotice} error={actionError} onToggle={toggleAgent} onSavePolicy={saveAgentPolicy} onToggleDelegation={toggleDelegation} /> : <LiveSectionUnavailable title="Agent controls and audit are not available yet" detail={supportingError ?? "The agent and audit APIs have not been connected."} />}
             </div>
           </>
         )}

@@ -127,7 +127,7 @@ describe("broker model", () => {
     expect(applicationDecisionError({ ...pending, sanctions: "flagged" }, "approve")).toBe(
       "This application cannot be approved because the sanctions gate did not clear.",
     );
-    expect(applicationDecisionError({ ...pending, status: "approved" }, "approve")).toBe(
+    expect(applicationDecisionError({ ...pending, status: "active" }, "approve")).toBe(
       "This application has already been decided.",
     );
   });

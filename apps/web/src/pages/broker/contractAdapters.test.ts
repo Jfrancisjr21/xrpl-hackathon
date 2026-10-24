@@ -12,9 +12,22 @@ describe("broker contract adapters", () => {
       amount: 500,
       rate: 7.4,
       score: 88,
-      status: "approved",
+      status: "active",
       sanctions: "clear",
+      decisionHash: samples.applicationApproved.decisionHash,
+      loanId: samples.applicationApproved.loanId,
+      txHash: samples.applicationApproved.tx?.hash,
     });
+  });
+
+  it("keeps denied, rejected and failed outcomes distinct", () => {
+    const denied = applicationFromContract(samples.applicationDenied);
+    const rejected = applicationFromContract({ ...samples.applicationApproved, status: "rejected", brokerNote: "Outside policy" });
+    const failed = applicationFromContract({ ...samples.applicationApproved, status: "failed", error: "Ledger unavailable" });
+
+    expect(denied.status).toBe("denied");
+    expect(rejected).toMatchObject({ status: "rejected", brokerNote: "Outside policy" });
+    expect(failed).toMatchObject({ status: "failed", error: "Ledger unavailable" });
   });
 
   it("uses ledger permissions instead of guessing from the browser clock", () => {

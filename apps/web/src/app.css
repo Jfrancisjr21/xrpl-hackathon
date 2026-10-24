@@ -190,6 +190,10 @@ th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; }
 .revenue-list dd { margin: 0; font-weight: 500; }
 .revenue-warning { margin-top: 14px; border: 1px solid #efb8ba; border-radius: var(--radius-control); background: #fff5f5; color: #831c1e; padding: 10px 12px; font-size: 12px; line-height: 1.45; }
 .empty-state { min-height: 46px; display: grid; place-items: center start; border: 1px dashed var(--control); border-radius: var(--radius-control); padding: 12px; color: var(--muted); font-size: 13px; }
+.unavailable-panel { max-width: 760px; }
+.unavailable-panel h2 { margin-bottom: 8px; font-size: 16px; }
+.unavailable-panel p { margin-bottom: 16px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.block-error { min-height: 46px; display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 12px; border: 1px solid #efb8ba; border-radius: var(--radius-control); background: #fff5f5; color: #831c1e; padding: 10px 12px; font-size: 13px; }
 
 .split-view { display: grid; grid-template-columns: minmax(0, 1fr) 390px; gap: var(--gap); align-items: start; }
 .split-view:not(.split-view--detail) { grid-template-columns: minmax(0, 1fr); }
@@ -227,6 +231,12 @@ th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; }
 .score-parts small { color: var(--muted); font-size: 11px; }
 .score-parts b { font-size: 13px; font-weight: 500; }
 .receipt-section a { color: var(--text); font-size: 13px; text-underline-offset: 3px; }
+.receipt-list { display: grid; gap: 9px; margin: 0; }
+.receipt-list div { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 28px; }
+.receipt-list dt { color: var(--muted); font-size: 12px; }
+.receipt-list dd { display: flex; align-items: center; justify-content: flex-end; gap: 10px; min-width: 0; margin: 0; font-size: 12px; }
+.receipt-list code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.outcome-section { border-left: 2px solid var(--negative); padding-left: 12px; }
 .inline-error { margin-top: 18px; border: 1px solid #efb8ba; border-radius: var(--radius-control); background: #fff5f5; color: #831c1e; padding: 10px 12px; font-size: 13px; }
 .action-progress { margin-top: 18px; border: 1px solid #bfd3ee; border-radius: var(--radius-control); background: #f3f7fc; color: #24466f; padding: 10px 12px; font-size: 13px; }
 .decision-actions { display: grid; gap: 9px; margin-top: 24px; }

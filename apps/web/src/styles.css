@@ -147,6 +147,19 @@
 .decision-receipt code { padding: 2px 6px; border-radius: 6px; background: var(--raised); }
 .decision-receipt a { color: var(--action); font-weight: 500; }
 
+/* My loan (Phase 4): the facts as tone-step cells, payments as the primary action, the schedule as a plain list. */
+.my-loan { display: grid; gap: 14px; }
+.loan-facts { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin: 0; }
+.loan-facts div { padding: 10px 12px; border-radius: var(--control-radius); background: var(--raised); }
+.loan-facts dt { font-size: 12px; color: var(--muted); }
+.loan-facts dd { margin: 2px 0 0; font-size: 15px; font-weight: 600; }
+.ok { margin: 0; padding: 10px 12px; border-radius: var(--control-radius); background: var(--pill-positive-bg); color: var(--pill-positive-ink); font-size: 14px; font-weight: 500; }
+.schedule { display: grid; gap: 8px; }
+.schedule h2 { margin: 0; }
+.schedule ol { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.schedule li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--rule); font-size: 14px; }
+.schedule li:last-child { border-bottom: 0; }
+
 /* BrokerApp was built as a whole page with bars fixed to the window. Inside the shell they sit below the
    shell header instead of over it: the sidebar takes its grid column, the phone menu bar sticks in the tab. */
 @media (min-width: 1101px) {
@@ -165,6 +178,8 @@
   .step-dot { height: 10px; }
   .score-parts, .cost dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .cost dl div:last-child:nth-child(odd) { grid-column: 1 / -1; }
+  .loan-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .loan-facts div:last-child:nth-child(odd) { grid-column: 1 / -1; }
 }
 @media (max-width: 640px) {
   .shell-bar, .shell-main { padding-left: 16px; padding-right: 16px; }

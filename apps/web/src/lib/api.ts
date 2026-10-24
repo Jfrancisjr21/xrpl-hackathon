@@ -9,8 +9,8 @@ import { ApiError } from "./apiError";
 
 const BASE = import.meta.env.VITE_API_URL ?? ""; // empty in dev: Vite proxies /api to :3001
 
-// VITE_MOCK=true serves the reads, the vault deposit and withdraw, and loan applications from samples/ until the
-// API routes merge. Every other write always goes to the API.
+// VITE_MOCK=true serves the reads, the vault deposit and withdraw, loan applications and loan payments from samples/
+// until the API routes merge. Every other write always goes to the API.
 const MOCK = import.meta.env.VITE_MOCK === "true";
 
 export { ApiError };
@@ -51,8 +51,8 @@ export const api = {
     read<ApplicationView[]>(`/applications?borrower=${q(borrower)}`, () => samples.applicationsFor(borrower)),
   loans: (borrower?: string) =>
     read<LoanView[]>("/loans" + (borrower ? `?borrower=${q(borrower)}` : ""), () => samples.loansFor(borrower)),
-  pay: (loanId: string, mode: PayMode) => post<PayResult>(`/loans/${q(loanId)}/pay`, { mode }),
-  payDue: (loanId: string) => post<PayResult>(`/loans/${q(loanId)}/pay-due`),
+  pay: (loanId: string, mode: PayMode) => (MOCK ? samples.pay(loanId, mode) : post<PayResult>(`/loans/${q(loanId)}/pay`, { mode })),
+  payDue: (loanId: string) => (MOCK ? samples.payDue(loanId) : post<PayResult>(`/loans/${q(loanId)}/pay-due`)),
   // Broker (page 04)
   broker: () => http<BrokerView>("/broker"),
   coverDeposit: (amount: string) => post<TxResult>("/broker/cover/deposit", { amount }),

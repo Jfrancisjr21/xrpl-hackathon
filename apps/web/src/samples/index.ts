@@ -34,7 +34,7 @@ const confirmMs = import.meta.env.MODE === "test" ? 0 : 1500; // a Devnet write 
 const phaseAt = (now = Date.now()): VaultPhase =>
   now < Date.parse(subscriptionDate) ? "subscription" : now < Date.parse(redemptionDate) ? "investment" : "redemption";
 
-// The vault asset (USD-Demo) is an MPT, so amounts are whole numbers and plain integers are exact here.
+// The vault asset (a Devnet test MPT shown as simulated XRP) is an MPT, so amounts are whole numbers and plain integers are exact here.
 const deposits = new Map<string, number>(vault.position ? [[vault.position.address, Number(vault.position.deposited)]] : []);
 const others = Number(vault.assetsTotal) - [...deposits.values()].reduce((a, b) => a + b, 0);
 const total = () => others + [...deposits.values()].reduce((a, b) => a + b, 0);

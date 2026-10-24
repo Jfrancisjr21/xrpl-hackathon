@@ -279,7 +279,7 @@ function CoverPanel({
           <form className="confirm-dialog cover-dialog" onSubmit={submit} role="alertdialog" aria-modal="true" aria-labelledby="cover-dialog-title" onKeyDown={(event) => event.key === "Escape" && !pendingAction && setAction(null)}>
             <h3 id="cover-dialog-title">{action === "deposit" ? "Deposit first-loss cover" : "Withdraw first-loss cover"}</h3>
             <p>{action === "deposit" ? "Add broker capital to protect lenders." : "Review the remaining cover before confirming this withdrawal."}</p>
-            <label htmlFor="cover-amount">Amount (USD)</label>
+            <label htmlFor="cover-amount">Amount (XRP)</label>
             <input id="cover-amount" type="number" min="0.01" step="0.01" inputMode="decimal" autoFocus value={amount} onChange={(event) => setAmount(event.target.value)} disabled={pendingAction !== null} />
             <dl className="confirm-terms cover-preview">
               <div><dt>Cover after action</dt><dd className="num">{formatMoney(adjustedCover)}</dd></div>

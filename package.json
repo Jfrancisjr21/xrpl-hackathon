@@ -8,6 +8,11 @@
     "dev:api": "pnpm --filter @hack/api dev",
     "dev:web": "pnpm --filter @hack/web dev",
     "typecheck": "pnpm -r typecheck",
-    "test": "pnpm -r --if-present test"
+    "test": "pnpm -r --if-present test",
+    "ledger:fund-wallets": "pnpm --filter @hack/ledger fund-wallets",
+    "ledger:check-wallets": "pnpm --filter @hack/ledger check-wallets",
+    "ledger:bootstrap": "pnpm --filter @hack/ledger bootstrap",
+    "ledger:new-vault": "pnpm --filter @hack/ledger new-vault",
+    "ledger:lifecycle": "pnpm --filter @hack/ledger lifecycle"
   }
 }

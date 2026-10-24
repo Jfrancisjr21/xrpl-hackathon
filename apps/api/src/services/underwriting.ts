@@ -12,7 +12,7 @@ export const placeholderUnderwrite: Underwrite = async () => ({
   featureSource: null,
   score: null,
   minScore: 50,
-  interestRate: null,
+  interestRate: 10000, // placeholder 10% so approve can be tested end to end
   reasons: ["Placeholder decision: the risk pipeline is not merged yet"],
   explanation: "This application was not scored. The underwriting agent is not connected yet.",
   explanationSource: "template",

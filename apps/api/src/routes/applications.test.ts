@@ -4,7 +4,7 @@ import { ApplicationView, DemoWallet, ErrorResponse, HealthResponse, type Decisi
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "../app";
 import { openDb, setConfig, type Db } from "../db/db";
-import type { LedgerService } from "@hack/ledger";
+import { LedgerNotReadyError, type LedgerService, type LoanTerms } from "@hack/ledger";
 import type { Underwrite } from "../services/underwriting";
 
 const KEY = "test-broker-key-123";
@@ -19,7 +19,14 @@ const fakeLedger = {
     { role: "bob", label: "Bob", address: BOB },
   ],
   getVault: async () => ({ phase: "subscription" }),
+  originateLoan: (t: LoanTerms) => originate(t),
 } as unknown as LedgerService;
+
+// What the fake ledger does on originateLoan; each test sets it.
+const LOAN_ID = "C".repeat(64);
+const TX = { hash: "D".repeat(64), result: "tesSUCCESS", explorerUrl: `https://devnet.xrpl.org/transactions/${"D".repeat(64)}` };
+let originate: (t: LoanTerms) => Promise<{ loanId: string; tx: typeof TX }>;
+let lastTerms: LoanTerms | undefined;
 const decision = (approved: boolean): Decision => ({
   approved, sanctions: { blocked: false }, facts: null, featureSource: null, score: null, minScore: 50,
   interestRate: approved ? 7400 : null, reasons: [approved ? "ok" : "no"], explanation: "x", explanationSource: "template",
@@ -33,6 +40,9 @@ beforeEach(() => {
   process.env.XRPL_URL = "wss://s.devnet.rippletest.net:51233";
   db = openDb(":memory:");
   underwriteCalls = 0;
+  lastTerms = undefined;
+  process.env.DEMO_FAST_LOANS = "true";
+  originate = async (t) => { lastTerms = t; return { loanId: LOAN_ID, tx: TX }; };
   const counted: Underwrite = (i) => { underwriteCalls++; return fakeUnderwrite(i); };
   server = createApp({ db, ledger: fakeLedger, underwrite: counted }).listen(0);
   base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
@@ -138,5 +148,63 @@ describe("POST /api/applications/:id/reject", () => {
     expect((await call("/api/applications/1/reject", { method: "POST", key: KEY, body: { note: "no" } })).status).toBe(409);
     await apply();
     expect((await call("/api/applications/2/reject", { method: "POST", key: KEY, body: { note: "   " } })).status).toBe(400);
+  });
+});
+
+describe("POST /api/applications/:id/approve", () => {
+  const approve = (id = 1) => call(`/api/applications/${id}/approve`, { method: "POST", key: KEY });
+
+  it("needs the broker key", async () => {
+    await apply();
+    expect((await call("/api/applications/1/approve", { method: "POST" })).status).toBe(401);
+  });
+
+  it("originates the loan and makes the application active, with the decision hash as the memo", async () => {
+    const created = (await apply()).body;
+    const r = await approve();
+    expect(r.status).toBe(200);
+    expect(ApplicationView.parse(r.body)).toMatchObject({ status: "active", loanId: LOAN_ID, tx: TX });
+    expect(lastTerms).toEqual({
+      borrower: ALICE, principal: "500", interestRate: 7400, paymentTotal: 3,
+      paymentIntervalSec: 60, gracePeriodSec: 60, decisionMemo: created.decisionHash,
+    });
+  });
+
+  it("uses 30-day payments when DEMO_FAST_LOANS is off", async () => {
+    process.env.DEMO_FAST_LOANS = "false";
+    await apply();
+    await approve();
+    expect(lastTerms?.paymentIntervalSec).toBe(30 * 24 * 60 * 60);
+  });
+
+  it("answers 409 with opensAt during the deposit window, and leaves the application approvable", async () => {
+    originate = async () => { throw new LedgerNotReadyError("Loans open when the deposit window closes", "2026-10-24T22:30:20.000Z"); };
+    await apply();
+    const r = await approve();
+    expect(r).toEqual({ status: 409, body: { error: "Loans open when the deposit window closes", opensAt: "2026-10-24T22:30:20.000Z" } });
+    expect((await call("/api/applications/1")).body.status).toBe("pending_review");
+  });
+
+  it("marks the application failed with the reason when the ledger refuses (502)", async () => {
+    originate = async () => { throw new Error("LoanSet failed with tecINSUFFICIENT_FUNDS"); };
+    await apply();
+    const r = await approve();
+    expect(r.status).toBe(502);
+    expect((await call("/api/applications/1")).body).toMatchObject({ status: "failed", error: "LoanSet failed with tecINSUFFICIENT_FUNDS" });
+  });
+
+  it("never originates twice, even when two approvals arrive together", async () => {
+    let calls = 0;
+    originate = async (t) => { calls++; await new Promise((r) => setTimeout(r, 50)); lastTerms = t; return { loanId: LOAN_ID, tx: TX }; };
+    await apply();
+    const [a, b] = await Promise.all([approve(), approve()]);
+    expect([a.status, b.status].sort()).toEqual([200, 409]);
+    expect(calls).toBe(1);
+  });
+
+  it("refuses denied, rejected or unknown applications", async () => {
+    await apply(BOB); // denied
+    expect((await approve(1)).status).toBe(409);
+    expect((await approve(99)).status).toBe(404);
   });
 });

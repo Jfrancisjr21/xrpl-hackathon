@@ -31,14 +31,17 @@ export function usePoll<T>(load: () => Promise<T>, deps: unknown[], intervalMs =
   return { data, error, loading, refreshing, refresh };
 }
 
-/** One write at a time per button. Keeps the last result and error for the receipt or the error line. */
+/**
+ * One write at a time per button. Keeps the last result and error for the receipt or the error line.
+ * A new attempt clears both, so an earlier receipt never sits next to a failure it does not belong to.
+ */
 export function useTx<R>() {
   const [pending, setPending] = useState(false);
   const [result, setResult] = useState<R | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [opensAt, setOpensAt] = useState<string | null>(null);
   const run = async (fn: () => Promise<R>, after?: () => unknown) => {
-    setPending(true); setError(null); setOpensAt(null);
+    setPending(true); setResult(null); setError(null); setOpensAt(null);
     try { const r = await fn(); setResult(r); await after?.(); return r; }
     catch (e) { setError(errorText(e)); if (e instanceof ApiError) setOpensAt(e.opensAt); return null; }
     finally { setPending(false); }

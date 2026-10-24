@@ -78,6 +78,16 @@ export function getApplication(db: Db, id: number): ApplicationRow | undefined {
   return db.prepare("SELECT * FROM applications WHERE id = ?").get(id) as ApplicationRow | undefined;
 }
 
+export function getApplicationByLoan(db: Db, loanId: string): ApplicationRow | undefined {
+  return db.prepare("SELECT * FROM applications WHERE loan_id = ?").get(loanId) as ApplicationRow | undefined;
+}
+
+// R11: in review, originating, or active with a loan that has not ended yet.
+export function hasOpenApplication(db: Db, address: string): boolean {
+  return db.prepare(`SELECT 1 FROM applications WHERE borrower_address = ?
+                     AND status IN ('pending_review','originating','active') AND loan_outcome IS NULL`).get(address) !== undefined;
+}
+
 export function listApplications(db: Db, filter: { status?: ApplicationStatus; borrower?: string } = {}): ApplicationRow[] {
   return db
     .prepare(`SELECT * FROM applications

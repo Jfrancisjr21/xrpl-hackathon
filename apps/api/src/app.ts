@@ -5,6 +5,8 @@ import type { HealthResponse, VaultPhase } from "@hack/shared";
 import type { Db } from "./db/db";
 import { errorHandler } from "./middleware";
 import { applicationsRouter } from "./routes/applications";
+import { loansRouter } from "./routes/loans";
+import { vaultRouter } from "./routes/vault";
 import type { Underwrite } from "./services/underwriting";
 
 // Everything a route needs. index.ts passes the real ones (XrplLedger); tests pass fakes.
@@ -41,6 +43,8 @@ export function createApp(deps: Deps) {
   });
 
   app.use("/api/applications", applicationsRouter(deps));
+  app.use("/api/vault", vaultRouter(deps));
+  app.use("/api/loans", loansRouter(deps));
 
   app.use(errorHandler); // last: turns every thrown error into ErrorResponse
   return app;

@@ -43,7 +43,7 @@ beforeEach(() => {
   lastTerms = undefined;
   process.env.DEMO_FAST_LOANS = "true";
   originate = async (t) => { lastTerms = t; return { loanId: LOAN_ID, tx: TX }; };
-  const counted: Underwrite = (i) => { underwriteCalls++; return fakeUnderwrite(i); };
+  const counted: Underwrite = (i, ctx) => { underwriteCalls++; return fakeUnderwrite(i, ctx); };
   server = createApp({ db, ledger: fakeLedger, underwrite: counted }).listen(0);
   base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
 });

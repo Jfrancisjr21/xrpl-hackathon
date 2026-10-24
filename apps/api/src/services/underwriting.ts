@@ -1,19 +1,31 @@
 import type { Decision, LoanApplicationInput } from "@hack/shared";
 
-// Turns an application into the agent's Decision. Routes depend on this signature, not on @hack/risk directly.
-export type Underwrite = (input: LoanApplicationInput) => Promise<Decision>;
+// What the API knows from its own database: the ban list and the borrower's history with us.
+export interface UnderwriteContext {
+  banned: boolean; // defaulted on a loan with us
+  loansPaidOff: number; // feeds the internal score
+}
 
-// shortcut: placeholder until risk/pipeline (evaluate) merges; every application goes to review unscored.
-// Replace with a function that calls @hack/risk evaluate() with ledger facts, credit pull and history.
-export const placeholderUnderwrite: Underwrite = async () => ({
-  approved: true,
-  sanctions: { blocked: false },
-  facts: null,
-  featureSource: null,
-  score: null,
-  minScore: 50,
-  interestRate: 10000, // placeholder 10% so approve can be tested end to end
-  reasons: ["Placeholder decision: the risk pipeline is not merged yet"],
-  explanation: "This application was not scored. The underwriting agent is not connected yet.",
-  explanationSource: "template",
-});
+// Turns an application into the agent's Decision. Routes depend on this signature, not on @hack/risk directly.
+export type Underwrite = (input: LoanApplicationInput, ctx: UnderwriteContext) => Promise<Decision>;
+
+const base = { sanctions: { blocked: false }, facts: null, featureSource: null, score: null, minScore: 50, explanationSource: "template" as const };
+
+// shortcut: placeholder until risk/pipeline (evaluate) merges; it only applies the ban list, everything else goes to review unscored.
+// Replace with a function that calls @hack/risk evaluate() with ledger facts, credit pull and this context.
+export const placeholderUnderwrite: Underwrite = async (_input, ctx) =>
+  ctx.banned
+    ? {
+        ...base,
+        approved: false,
+        interestRate: null,
+        reasons: ["Address is on the ban list after a defaulted loan with us"],
+        explanation: "This application was declined because a previous loan with us was defaulted.",
+      }
+    : {
+        ...base,
+        approved: true,
+        interestRate: 10000, // placeholder 10% so approve can be tested end to end
+        reasons: ["Placeholder decision: the risk pipeline is not merged yet"],
+        explanation: "This application was not scored. The underwriting agent is not connected yet.",
+      };

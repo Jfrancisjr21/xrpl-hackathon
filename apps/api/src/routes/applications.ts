@@ -3,10 +3,8 @@ import { Router } from "express";
 import { LedgerNotReadyError } from "@hack/ledger";
 import { ApplicationIdParam, ApplicationQuery, BrokerNote, LoanApplicationInput, type Decision } from "@hack/shared";
 import type { Deps } from "../app";
-import { audit, createApplication, getApplication, getConfig, listApplications, toView, transition } from "../db/db";
+import { audit, createApplication, getApplication, getConfig, hasOpenApplication, isBanned, listApplications, loansPaidOff, toView, transition } from "../db/db";
 import { HttpError, LedgerError, requireBrokerKey, validate } from "../middleware";
-
-const OPEN = ["pending_review", "originating", "active"];
 
 // Payment interval and grace period. DEMO_FAST_LOANS makes payments due every 60 s so impair and default can be shown live.
 export function loanTiming() {
@@ -27,11 +25,14 @@ export function applicationsRouter({ db, ledger, underwrite }: Deps) {
       throw new HttpError(400, "Unknown borrower", { fields: { borrowerAddress: "must be one of the demo wallets from GET /api/wallets" } });
     }
     // R11, checked before underwriting so a duplicate never costs a credit pull. The database enforces it again on insert.
-    if (listApplications(db, { borrower: input.borrowerAddress }).some((a) => OPEN.includes(a.status))) {
+    if (hasOpenApplication(db, input.borrowerAddress)) {
       throw new HttpError(409, "This borrower already has an application in review, originating or active");
     }
 
-    const decision = await underwrite(input);
+    const decision = await underwrite(input, {
+      banned: isBanned(db, input.borrowerAddress),
+      loansPaidOff: loansPaidOff(db, input.borrowerAddress),
+    });
     const decisionHash = createHash("sha256").update(JSON.stringify(decision)).digest("hex"); // Feature 1
     const row = createApplication(db, {
       borrowerAddress: input.borrowerAddress,

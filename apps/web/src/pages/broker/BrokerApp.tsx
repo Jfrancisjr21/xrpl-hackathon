@@ -1,7 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { StatusBadge } from "../../components/StatusBadge";
-import { brokerRequest } from "./api";
+import { api, setBrokerKey as setApiBrokerKey } from "../../lib/api";
+import {
+  agentFromContract,
+  alertFromContract,
+  applicationFromContract,
+  auditFromContract,
+  loanFromContract,
+  snapshotFromContract,
+} from "./contractAdapters";
 import { demoAgent, demoApplications, demoAudit, demoLoans, demoSnapshot } from "./demoData";
 import {
   agentPolicyError,
@@ -46,7 +54,7 @@ type BrokerTab = "overview" | "applications" | "loans" | "agent";
 type AlertView = { loanId: string; message: string };
 type AgentAction = "status" | "policy" | "delegation";
 
-const sampleMode = import.meta.env.VITE_MOCK !== "false";
+const sampleMode = import.meta.env.VITE_MOCK === "true";
 
 const tabs: Array<{ id: BrokerTab; label: string }> = [
   { id: "overview", label: "Overview" },
@@ -265,7 +273,7 @@ function CoverPanel({
         <span className="cover-minimum" style={{ left: `${requiredPosition}%` }} />
       </div>
       <div className="cover-labels">
-        <span>$0</span>
+        <span>0 XRP</span>
         <span>Minimum {formatMoney(required)}</span>
       </div>
       <p>{required === 0 ? "No minimum cover is required while total debt is zero." : `Cover is ${formatMultiple(ratio)} the minimum required by current debt.`}</p>
@@ -311,7 +319,7 @@ function RevenuePanel({ snapshot }: { snapshot: BrokerSnapshot }) {
         <div><dt>Interest collected</dt><dd className="num">{formatMoney(snapshot.interestCollected)}</dd></div>
         <div><dt>Platform fee earned</dt><dd className="num">{formatMoney(snapshot.platformFee)}</dd></div>
         <div><dt>Lender share</dt><dd className="num">{formatMoney(snapshot.interestCollected - snapshot.platformFee)}</dd></div>
-        <div><dt>Projected active-loan fee</dt><dd className="num">{formatMoney(snapshot.projectedFee)}</dd></div>
+        <div><dt>Projected active-loan fee</dt><dd className="num">{snapshot.projectedFee === null ? "—" : formatMoney(snapshot.projectedFee)}</dd></div>
       </dl>
       {feesPaused ? <div className="revenue-warning">Fees are not charged while first-loss cover is below the required minimum.</div> : null}
       <p className="panel-note">Revenue is {snapshot.revenueSource} · vault phase: {snapshot.vaultPhase}</p>
@@ -674,6 +682,7 @@ function LoansView({ loans, selected, error, pendingAction, receipt, onSelect, o
 function AgentView({
   agent,
   audit,
+  live,
   pendingAction,
   policyNotice,
   delegationNotice,
@@ -684,6 +693,7 @@ function AgentView({
 }: {
   agent: AgentState;
   audit: AuditEntry[];
+  live: boolean;
   pendingAction: AgentAction | null;
   policyNotice: string | null;
   delegationNotice: string | null;
@@ -721,7 +731,7 @@ function AgentView({
       <section className="settings-row">
         <div className="settings-copy"><h2>Underwriting agent</h2><p>Pause automated scoring without changing broker approval controls.</p></div>
         <div className="settings-panel">
-          <div className="switch-row"><div><span>Agent status</span><StatusBadge value={agent.running ? "running" : "paused"} /><p>{agent.running ? "New applications are scored as they arrive." : "Every application waits for a broker decision."}</p></div><button type="button" className={`switch ${agent.running ? "switch--on" : ""}`} role="switch" aria-label="Underwriting agent running" aria-checked={agent.running} disabled={pendingAction !== null} onClick={() => void onToggle()}><span /></button></div>
+          <div className="switch-row"><div><span>Agent status</span><StatusBadge value={agent.running ? "running" : "paused"} /><p>{live ? "Pause and resume are not in the shared API contract yet." : agent.running ? "New applications are scored as they arrive." : "Every application waits for a broker decision."}</p></div><button type="button" className={`switch ${agent.running ? "switch--on" : ""}`} role="switch" aria-label="Underwriting agent running" aria-checked={agent.running} disabled={live || pendingAction !== null} onClick={() => void onToggle()}><span /></button></div>
           <dl className="settings-values"><div><dt>Delegation</dt><dd>{agent.delegationActive ? "Active" : "Not active"}</dd></div><div><dt>Auto-approve</dt><dd>{agent.autoApprove ? "On" : "Off"}</dd></div><div><dt>Policy version</dt><dd>{agent.policyVersion}</dd></div></dl>
         </div>
       </section>
@@ -729,7 +739,7 @@ function AgentView({
         <div className="settings-copy"><h2>Approval policy</h2><p>The agent recommends; a human broker still approves every loan.</p></div>
         <form className="settings-panel policy-grid" onSubmit={savePolicy}>
           <label>Minimum score<input type="number" min="0" max="100" step="1" value={minimumScore} onChange={(event) => setMinimumScore(event.target.value)} disabled={pendingAction !== null} /></label>
-          <label>Maximum liquidity per loan (%)<input type="number" min="0.01" max="100" step="0.01" value={maxLiquidityPercent} onChange={(event) => setMaxLiquidityPercent(event.target.value)} disabled={pendingAction !== null} /></label>
+          <label>Maximum liquidity per loan (%)<input type="number" min="0.01" max="100" step="0.01" value={maxLiquidityPercent} onChange={(event) => setMaxLiquidityPercent(event.target.value)} disabled={live || pendingAction !== null} />{live ? <small>Not included in the shared policy contract yet.</small> : null}</label>
           {policyError ? <div className="inline-error policy-message" role="alert">{policyError}</div> : null}
           {policyNotice ? <div className="settings-notice policy-message" role="status">{policyNotice}</div> : null}
           <button className="button button--primary" type="submit" disabled={pendingAction !== null}>{pendingAction === "policy" ? "Saving…" : "Save policy"}</button>
@@ -782,6 +792,34 @@ export function BrokerApp() {
   const selectedLoan = loans.find((loan) => loan.id === selectedLoanId) ?? null;
   const pendingCount = applications.filter((application) => application.status === "pending_review").length;
 
+  const refreshBrokerData = useCallback(async () => {
+    if (sampleMode || preview || !brokerKey) {
+      setInitializing(false);
+      return;
+    }
+
+    setApiBrokerKey(brokerKey);
+    const [broker, revenue, vault, nextApplications, nextLoans, nextAgent, nextAudit, nextAlerts] = await Promise.all([
+      api.broker(),
+      api.revenue(),
+      api.vault(),
+      api.applications(),
+      api.loans(),
+      api.agent(),
+      api.audit(),
+      api.alerts(),
+    ]);
+    setSnapshot(snapshotFromContract(broker, revenue, vault));
+    setApplications(nextApplications.map(applicationFromContract));
+    setLoans(nextLoans.map(loanFromContract));
+    setAgent(agentFromContract(nextAgent));
+    setAudit(nextAudit.map(auditFromContract));
+    setAlerts(nextAlerts.map(alertFromContract));
+    setAlertCheckedAt(Date.now());
+    setAlertError(null);
+    setInitializing(false);
+  }, [brokerKey, preview]);
+
   const pollAlerts = useCallback(async () => {
     setAlertCheckedAt(Date.now());
     if (sampleMode || preview) {
@@ -790,8 +828,9 @@ export function BrokerApp() {
       return;
     }
     try {
-      const result = await brokerRequest<AlertView[]>(brokerKey, "/api/alerts");
-      setAlerts(result);
+      setApiBrokerKey(brokerKey);
+      const result = await api.alerts();
+      setAlerts(result.map(alertFromContract));
       setAlertError(null);
     } catch (error) {
       setAlertError(error instanceof Error ? error.message : "Could not refresh alerts.");
@@ -803,13 +842,18 @@ export function BrokerApp() {
   useEffect(() => {
     if (!brokerKey && !preview) return;
 
-    const initialPoll = window.setTimeout(() => void pollAlerts(), 0);
+    const initialPoll = window.setTimeout(() => {
+      void refreshBrokerData().catch((error: unknown) => {
+        setAlertError(error instanceof Error ? error.message : "Could not load broker data.");
+        setInitializing(false);
+      });
+    }, 0);
     const interval = window.setInterval(() => void pollAlerts(), 10_000);
     return () => {
       window.clearTimeout(initialPoll);
       window.clearInterval(interval);
     };
-  }, [brokerKey, pollAlerts, preview]);
+  }, [brokerKey, pollAlerts, preview, refreshBrokerData]);
 
   const finding = useMemo(() => {
     if (alerts.length) return `${formatNumber(alerts.length)} overdue loan${alerts.length === 1 ? "" : "s"} need${alerts.length === 1 ? "s" : ""} attention.`;
@@ -819,6 +863,7 @@ export function BrokerApp() {
 
   function unlock(key: string) {
     sessionStorage.setItem("xrpl-broker-key", key);
+    setApiBrokerKey(key);
     if (!sampleMode) setInitializing(true);
     setBrokerKey(key);
   }
@@ -851,7 +896,7 @@ export function BrokerApp() {
   async function runAction(action: () => void | Promise<void>) {
     setRefreshing(true);
     try {
-      await new Promise((resolve) => window.setTimeout(resolve, 650));
+      if (sampleMode || preview) await new Promise((resolve) => window.setTimeout(resolve, 650));
       await action();
     } finally {
       setRefreshing(false);
@@ -869,7 +914,12 @@ export function BrokerApp() {
     setApplications((current) => current.map((item) => item.id === application.id ? { ...item, status: "originating" } : item));
 
     try {
-      await runAction(() => {
+      await runAction(async () => {
+        if (!sampleMode && !preview) {
+          await api.approve(Number(application.id));
+          await refreshBrokerData();
+          return;
+        }
         setApplications((current) => current.map((item) => item.id === application.id ? { ...item, status: "approved" } : item));
         setAudit((current) => [{ id: `AUD-${Date.now()}`, at: new Date().toISOString(), actor: "broker", action: "Application approved", subject: application.id, reason: reviewNote || "Broker approved agent recommendation" }, ...current]);
       });
@@ -892,7 +942,12 @@ export function BrokerApp() {
     setPendingDecision("reject");
 
     try {
-      await runAction(() => {
+      await runAction(async () => {
+        if (!sampleMode && !preview) {
+          await api.reject(Number(application.id), note);
+          await refreshBrokerData();
+          return;
+        }
         setApplications((current) => current.map((item) => item.id === application.id ? { ...item, status: "rejected" } : item));
         setAudit((current) => [{ id: `AUD-${Date.now()}`, at: new Date().toISOString(), actor: "broker", action: "Rejected application", subject: application.id, reason: note }, ...current]);
       });
@@ -915,7 +970,13 @@ export function BrokerApp() {
     setPendingLoanAction(action);
 
     try {
-      await runAction(() => {
+      await runAction(async () => {
+        if (!sampleMode && !preview) {
+          const receipt = await api.manageLoan(loan.id, action);
+          await refreshBrokerData();
+          setLoanActionReceipt({ loanId: loan.id, action, confirmedAt: new Date().toISOString(), txHash: receipt.hash });
+          return;
+        }
         if (action === "delete") {
           setLoans((current) => current.filter((item) => item.id !== loan.id));
           setSelectedLoanId(null);
@@ -946,7 +1007,14 @@ export function BrokerApp() {
     setPendingCoverAction(action);
 
     try {
-      await runAction(() => {
+      await runAction(async () => {
+        if (!sampleMode && !preview) {
+          if (action === "deposit") await api.coverDeposit(String(amount));
+          else await api.coverWithdraw(String(amount));
+          await refreshBrokerData();
+          setCoverNotice(`${action === "deposit" ? "Deposited" : "Withdrew"} cover: ${formatMoney(amount)}.`);
+          return;
+        }
         setSnapshot((current) => ({
           ...current,
           coverAvailable: coverAfterAdjustment(current, action, amount),
@@ -972,6 +1040,10 @@ export function BrokerApp() {
 
   async function toggleAgent() {
     if (pendingAgentAction) return;
+    if (!sampleMode && !preview) {
+      setActionError("Pause and resume are not part of the shared API contract yet.");
+      return;
+    }
     const running = !agent.running;
     setActionError(null);
     setPendingAgentAction("status");
@@ -1006,7 +1078,13 @@ export function BrokerApp() {
     const savedVersion = nextPolicyVersion(agent.policyVersion);
 
     try {
-      await runAction(() => {
+      await runAction(async () => {
+        if (!sampleMode && !preview) {
+          await api.setPolicy({ minScore: minimumScore });
+          await refreshBrokerData();
+          setPolicyNotice("Policy saved to the lending API.");
+          return;
+        }
         const at = new Date().toISOString();
         setAgent((current) => ({ ...current, minimumScore, maxLiquidityPercent, policyVersion: savedVersion }));
         setPolicyNotice(`Policy saved as ${savedVersion}.`);
@@ -1033,7 +1111,14 @@ export function BrokerApp() {
     setPendingAgentAction("delegation");
 
     try {
-      await runAction(() => {
+      await runAction(async () => {
+        if (!sampleMode && !preview) {
+          const enabled = !agent.delegationActive;
+          const receipt = await api.setDelegation({ enabled });
+          await refreshBrokerData();
+          setDelegationNotice(receipt ? `Two-key approval ${enabled ? "enabled" : "disabled"}.` : "Two-key approval is not available on the ledger yet.");
+          return;
+        }
         if (agent.delegationActive) {
           setAgent((current) => ({ ...current, delegationActive: false }));
           setDelegationNotice("Two-key approval is off.");
@@ -1064,13 +1149,13 @@ export function BrokerApp() {
             </button>
           ))}
         </nav>
-        <div className="sidebar-meta"><span className="signal-dot signal-dot--blue" />{preview || sampleMode ? "Sample contract data" : "Live Devnet"}<small>Alerts checked {formatDate(new Date(alertCheckedAt).toISOString())}</small></div>
+        <div className="sidebar-meta"><span className="signal-dot signal-dot--blue" />{preview || sampleMode ? "Sample XRP data" : "Live lending data"}<small>Alerts checked {formatDate(new Date(alertCheckedAt).toISOString())}</small></div>
       </aside>
       {menuOpen ? <button className="menu-scrim" type="button" aria-label="Close navigation" onClick={() => setMenuOpen(false)} /> : null}
       <main className="canvas">
         <header className="page-header">
           <div><h1>{tabs.find((item) => item.id === tab)?.label}</h1><p>{tab === "overview" ? finding : "Broker controls for the live XRPL lending flow."}</p></div>
-          <div className="freshness"><span>{refreshing ? "Updating…" : alertError ? "Needs attention" : "Up to date"}</span><button type="button" disabled={refreshing} onClick={() => void runAction(pollAlerts)}>Refresh</button></div>
+          <div className="freshness"><span>{refreshing ? "Updating…" : alertError ? "Needs attention" : "Up to date"}</span><button type="button" disabled={refreshing} onClick={() => void runAction(refreshBrokerData)}>Refresh</button></div>
         </header>
         {initializing ? <BrokerSkeleton /> : (
           <>
@@ -1085,7 +1170,7 @@ export function BrokerApp() {
               <LoansView loans={loans} selected={selectedLoan} error={actionError} pendingAction={pendingLoanAction} receipt={loanActionReceipt} onSelect={openLoan} onAction={(action) => void manageLoan(action)} onClose={() => setSelectedLoanId(null)} />
             </div>
             <div hidden={tab !== "agent"}>
-              <AgentView agent={agent} audit={audit} pendingAction={pendingAgentAction} policyNotice={policyNotice} delegationNotice={delegationNotice} error={actionError} onToggle={toggleAgent} onSavePolicy={saveAgentPolicy} onToggleDelegation={toggleDelegation} />
+              <AgentView agent={agent} audit={audit} live={!sampleMode && !preview} pendingAction={pendingAgentAction} policyNotice={policyNotice} delegationNotice={delegationNotice} error={actionError} onToggle={toggleAgent} onSavePolicy={saveAgentPolicy} onToggleDelegation={toggleDelegation} />
             </div>
           </>
         )}

@@ -8,16 +8,19 @@ import { DepositorScreen } from "./pages/depositor/DepositorScreen";
 import { BorrowerScreen } from "./pages/borrower/BorrowerScreen";
 import { BrokerApp } from "./pages/broker/BrokerApp";
 
-type Tab = "depositor" | "borrower" | "broker";
+type Tab = "depositor" | "borrower";
 const TABS: { id: Tab; label: string }[] = [
   { id: "depositor", label: "Lender" },
   { id: "borrower", label: "Borrower" },
-  { id: "broker", label: "Broker" },
 ];
 
 export function App() {
-  // /broker still opens the broker workspace directly.
-  const [tab, setTab] = useState<Tab>(() => (window.location.pathname.startsWith("/broker") ? "broker" : "depositor"));
+  if (window.location.pathname.startsWith("/broker")) return <BrokerApp />;
+  return <UserApp />;
+}
+
+function UserApp() {
+  const [tab, setTab] = useState<Tab>("depositor");
   const wallets = usePoll(api.wallets, [], 0);
   const health = usePoll(api.health, [], 10_000);
   const h = health.data;
@@ -40,7 +43,7 @@ export function App() {
               : health.loading ? "Connecting…" : "API offline"}
           </span>
         </header>
-        {/* R5: all three tabs stay mounted and are hidden, so switching never loses typed text or the broker key.
+        {/* Both user tabs stay mounted so switching never loses typed text.
             The active wallet lives in WalletProvider and survives reloads too. */}
         <main>
           <section className="shell-main" hidden={tab !== "depositor"}>
@@ -49,9 +52,6 @@ export function App() {
           </section>
           <section className="shell-main" hidden={tab !== "borrower"}>
             <BorrowerScreen />
-          </section>
-          <section hidden={tab !== "broker"}>
-            <BrokerApp />
           </section>
         </main>
       </div>

@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { LoanIdParam, LoanQuery, PayRequest, type LoanView, type PayMode, type PayResult } from "@hack/shared";
 import type { Deps } from "../app";
+// shortcut: the fee constants are not exported from @hack/ledger's index yet; ask Juan to export them.
+import { SERVICE_FEE } from "@hack/ledger/src/loan";
 import { audit, closeLoan, getApplicationByLoan, listApplications, recordPayment } from "../db/db";
 import { HttpError, onLedger, requireBrokerKey, validate } from "../middleware";
 
@@ -40,10 +42,19 @@ export function loansRouter({ db, ledger }: Deps) {
   const pay = async (loanId: string, mode: PayMode): Promise<PayResult> => {
     const row = ourLoan(loanId);
     if (row.loan_outcome) throw new HttpError(409, `Loan is already ${row.loan_outcome}`);
+    const before = await onLedger(() => ledger.getLoan(loanId));
     const { tx, amount } = await onLedger(() => ledger.payLoan(loanId, mode));
-    recordPayment(db, { loanId, applicationId: row.id, mode, amount, txHash: tx.hash }); // R10
-    audit(db, { actor: "borrower", action: "loan_paid", applicationId: row.id, loanId, tx, note: `${mode} ${amount}` });
     const after = await ledger.getLoan(loanId).catch(() => null);
+    // The ledger reports only the total paid. Principal paid is the drop in outstanding principal;
+    // what is left is the service fee plus interest.
+    const principalPaid = Math.max(0, Number(before.principal) - Number(after?.principal ?? 0));
+    const serviceFee = Math.min(Number(SERVICE_FEE), Number(amount) - principalPaid);
+    const interest = Math.max(0, Number(amount) - principalPaid - serviceFee);
+    recordPayment(db, { // R10
+      loanId, applicationId: row.id, mode, amount, txHash: tx.hash,
+      principalPaid: String(principalPaid), interest: String(interest), serviceFee: String(serviceFee),
+    });
+    audit(db, { actor: "borrower", action: "loan_paid", applicationId: row.id, loanId, tx, note: `${mode} ${amount}` });
     if (after?.status === "paid") closeLoan(db, loanId, "paid");
     return { tx, amount };
   };

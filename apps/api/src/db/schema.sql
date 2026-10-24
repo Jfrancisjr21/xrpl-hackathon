@@ -33,6 +33,9 @@ CREATE TABLE IF NOT EXISTS payments (
   application_id INTEGER NOT NULL REFERENCES applications (id),
   mode           TEXT NOT NULL CHECK (mode IN ('installment','payoff')),
   amount         TEXT NOT NULL,
+  principal_paid TEXT,                     -- drop in outstanding principal; the rest of amount is interest + service fee
+  interest       TEXT,
+  service_fee    TEXT,
   tx_hash        TEXT NOT NULL,
   created_at     TEXT NOT NULL
 );

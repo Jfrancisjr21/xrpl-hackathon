@@ -4,7 +4,9 @@ import type { LedgerService } from "@hack/ledger";
 import type { HealthResponse, VaultPhase } from "@hack/shared";
 import type { Db } from "./db/db";
 import { errorHandler } from "./middleware";
+import { agentRouter, demoRouter } from "./routes/agent";
 import { applicationsRouter } from "./routes/applications";
+import { brokerRouter } from "./routes/broker";
 import { loansRouter } from "./routes/loans";
 import { vaultRouter } from "./routes/vault";
 import type { Underwrite } from "./services/underwriting";
@@ -45,6 +47,9 @@ export function createApp(deps: Deps) {
   app.use("/api/applications", applicationsRouter(deps));
   app.use("/api/vault", vaultRouter(deps));
   app.use("/api/loans", loansRouter(deps));
+  app.use("/api/broker", brokerRouter(deps));
+  app.use("/api/agent", agentRouter(deps));
+  app.use("/api/demo", demoRouter(deps));
 
   app.use(errorHandler); // last: turns every thrown error into ErrorResponse
   return app;

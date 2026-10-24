@@ -3,8 +3,9 @@ import { Router } from "express";
 import { LedgerNotReadyError } from "@hack/ledger";
 import { ApplicationIdParam, ApplicationQuery, BrokerNote, LoanApplicationInput, type Decision } from "@hack/shared";
 import type { Deps } from "../app";
-import { audit, createApplication, getApplication, getConfig, hasOpenApplication, isBanned, listApplications, loansPaidOff, toView, transition } from "../db/db";
+import { audit, createApplication, getApplication, hasOpenApplication, isBanned, listApplications, loansPaidOff, toView, transition } from "../db/db";
 import { HttpError, LedgerError, requireBrokerKey, validate } from "../middleware";
+import { agentView } from "./agent";
 
 // Payment interval and grace period. DEMO_FAST_LOANS makes payments due every 60 s so impair and default can be shown live.
 export function loanTiming() {
@@ -19,7 +20,7 @@ export function applicationsRouter({ db, ledger, underwrite }: Deps) {
   router.post("/", validate({ body: LoanApplicationInput }), async (req, res) => {
     const input = req.body as LoanApplicationInput;
 
-    if (getConfig(db, "paused") === "true") throw new HttpError(409, "The underwriting agent is paused, so new applications are not accepted right now");
+    if (agentView(db).paused) throw new HttpError(409, "The underwriting agent is paused, so new applications are not accepted right now");
     // The backend signs for borrowers in this demo, so only demo wallets can borrow.
     if (!ledger.getWallets().some((w) => w.address === input.borrowerAddress)) {
       throw new HttpError(400, "Unknown borrower", { fields: { borrowerAddress: "must be one of the demo wallets from GET /api/wallets" } });
@@ -32,6 +33,7 @@ export function applicationsRouter({ db, ledger, underwrite }: Deps) {
     const decision = await underwrite(input, {
       banned: isBanned(db, input.borrowerAddress),
       loansPaidOff: loansPaidOff(db, input.borrowerAddress),
+      minScore: agentView(db).policy.minScore,
     });
     const decisionHash = createHash("sha256").update(JSON.stringify(decision)).digest("hex"); // Feature 1
     const row = createApplication(db, {

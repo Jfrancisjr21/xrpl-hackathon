@@ -4,12 +4,13 @@ import type { Decision, LoanApplicationInput } from "@hack/shared";
 export interface UnderwriteContext {
   banned: boolean; // defaulted on a loan with us
   loansPaidOff: number; // feeds the internal score
+  minScore: number; // the broker's pass mark (POST /api/agent/policy)
 }
 
 // Turns an application into the agent's Decision. Routes depend on this signature, not on @hack/risk directly.
 export type Underwrite = (input: LoanApplicationInput, ctx: UnderwriteContext) => Promise<Decision>;
 
-const base = { sanctions: { blocked: false }, facts: null, featureSource: null, score: null, minScore: 50, explanationSource: "template" as const };
+const base = { sanctions: { blocked: false }, facts: null, featureSource: null, score: null, explanationSource: "template" as const };
 
 // shortcut: placeholder until risk/pipeline (evaluate) merges; it only applies the ban list, everything else goes to review unscored.
 // Replace with a function that calls @hack/risk evaluate() with ledger facts, credit pull and this context.
@@ -17,6 +18,7 @@ export const placeholderUnderwrite: Underwrite = async (_input, ctx) =>
   ctx.banned
     ? {
         ...base,
+        minScore: ctx.minScore,
         approved: false,
         interestRate: null,
         reasons: ["Address is on the ban list after a defaulted loan with us"],
@@ -24,6 +26,7 @@ export const placeholderUnderwrite: Underwrite = async (_input, ctx) =>
       }
     : {
         ...base,
+        minScore: ctx.minScore,
         approved: true,
         interestRate: 10000, // placeholder 10% so approve can be tested end to end
         reasons: ["Placeholder decision: the risk pipeline is not merged yet"],

@@ -11,6 +11,7 @@ import {
   filterApplications,
   formatDate,
   formatMultiple,
+  formatMoney,
   formatNumber,
   formatOverdueDuration,
   formatSeconds,
@@ -100,6 +101,7 @@ describe("broker model", () => {
   });
 
   it("formats operational numbers consistently", () => {
+    expect(formatMoney(25_000)).toBe("25,000 XRP");
     expect(formatNumber(12_345)).toBe("12,345");
     expect(formatMultiple(1.756)).toBe("1.76×");
     expect(formatSeconds(60)).toBe("60 seconds");

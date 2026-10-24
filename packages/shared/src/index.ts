@@ -117,10 +117,12 @@ export type CoverMove = z.infer<typeof CoverMove>;
 // ---------- Group 3: applications and decision ----------
 
 // POST /api/applications. The payment interval is not here: the server sets it (60 s when DEMO_FAST_LOANS=true).
+// creditConsent is the borrower's authorization for a credit pull (FCRA permissible purpose); missing means no.
 export const LoanApplicationInput = z.object({
   borrowerAddress: Address,
   amount: AmountInput,
   paymentTotal: z.number().int().min(1).max(24),
+  creditConsent: z.boolean().optional(),
 });
 export type LoanApplicationInput = z.infer<typeof LoanApplicationInput>;
 
@@ -146,26 +148,62 @@ export type AccountFacts = z.infer<typeof AccountFacts>;
 export const FeatureSource = z.enum(["ledger", "demo-profile"]);
 export type FeatureSource = z.infer<typeof FeatureSource>;
 
-// Points per signal. Caps: age 30, activity 30, trustlines 20, credential 20.
+// Points per wallet signal (caps: age 30, activity 30, trustlines 20, credential 20), then the blend:
+// wallet = the four signals; internal = wallet + 10 per loan paid off with us (max 100);
+// credit = middle bureau score mapped to 0-100 (null with no credit file);
+// total = 60% credit + 40% internal, or internal alone with no credit file.
 export const ScoreBreakdown = z.object({
   age: z.number().int().min(0).max(30),
   activity: z.number().int().min(0).max(30),
   trustlines: z.number().int().min(0).max(20),
   credential: z.number().int().min(0).max(20),
+  wallet: z.number().int().min(0).max(100).optional(),
+  paidOffBonus: z.number().int().min(0).max(100).optional(),
+  internal: z.number().int().min(0).max(100).optional(),
+  credit: z.number().int().min(0).max(100).nullable().optional(),
   total: z.number().int().min(0).max(100),
 });
 export type ScoreBreakdown = z.infer<typeof ScoreBreakdown>;
 
+// What we keep from a credit pull: scores and reasons only, never SSN, date of birth or the report itself.
+export const CreditBureauName = z.enum(["experian", "equifax", "transunion"]);
+export const CreditSummary = z.object({
+  provider: z.enum(["demo", "isoftpull"]),
+  pullType: z.enum(["soft", "hard"]),
+  pulledAt: IsoDate,
+  fileFound: z.boolean(),
+  scores: z.array(z.object({ bureau: CreditBureauName, model: z.string(), score: z.number().int().min(300).max(850) })),
+  middleScore: z.number().int().min(300).max(850).nullable(), // middle of the bureaus' FICO 8, like a mortgage lender
+  reasonCodes: z.array(z.string()), // the bureau's adverse-action reasons
+});
+export type CreditSummary = z.infer<typeof CreditSummary>;
+
+// approved: unsecured loan offered. secured_offer: credit-builder loan up to maxAmount, fully backed by collateral.
+// denied: sanctions, ban list, no credit consent, or amount above the secured limit.
+export const DecisionOutcome = z.enum(["approved", "secured_offer", "denied"]);
+export type DecisionOutcome = z.infer<typeof DecisionOutcome>;
+
+// A: score 75+, B: 60-74, C: 50-59, secured: below 50 or no credit file. Each level has its own amount and term limits.
+export const ApprovalLevel = z.enum(["A", "B", "C", "secured"]);
+export type ApprovalLevel = z.infer<typeof ApprovalLevel>;
+
 // The agent's full reasoning. facts, featureSource and score are null when the sanctions gate blocks before scoring.
-// interestRate is null unless approved. The SHA-256 of this object is the Feature 1 decision memo.
+// interestRate is null unless approved or offered secured. The SHA-256 of this object is the Feature 1 decision memo.
 export const Decision = z.object({
   approved: z.boolean(),
+  outcome: DecisionOutcome.optional(),
   sanctions: SanctionsResult,
+  banned: z.boolean().optional(), // on our ban list after a defaulted loan
   facts: AccountFacts.nullable(),
   featureSource: FeatureSource.nullable(),
+  credit: CreditSummary.nullable().optional(),
   score: ScoreBreakdown.nullable(),
   minScore: z.number().int().min(0).max(100),
   interestRate: Rate.nullable(),
+  approvalLevel: ApprovalLevel.nullable().optional(),
+  maxAmount: Amount.nullable().optional(), // smallest of the level cap, 20% of vault liquidity and cover headroom
+  maxPaymentTotal: z.number().int().min(1).max(24).nullable().optional(),
+  collateralRequired: Amount.nullable().optional(), // secured_offer only: equals the loan amount
   reasons: z.array(z.string()),
   explanation: z.string(),
   explanationSource: z.enum(["template", "ai"]),

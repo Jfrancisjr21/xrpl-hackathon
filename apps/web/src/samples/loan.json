@@ -1,0 +1,15 @@
+{
+  "loanId": "D22500AA9F831D5A9502D83D54214DA01B0F3C3C4CAD58F3927BCB459C8FE946",
+  "applicationId": 1,
+  "borrower": "r82eGxR3UNRT8m37GYSvJt8yJPNsicR1SS",
+  "principal": "500",
+  "interestRate": 7400,
+  "paymentsRemaining": 6,
+  "nextDueIso": "2026-10-25T18:00:00Z",
+  "totalOwed": "500.00",
+  "status": "active",
+  "installmentDue": "83.33",
+  "payoffAmount": "500.00",
+  "canImpair": false,
+  "canDefault": false
+}

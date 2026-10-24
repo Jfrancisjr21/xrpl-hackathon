@@ -242,12 +242,9 @@ export function formatOverdueDuration(overdueSeconds: number) {
 }
 
 export function formatMoney(value: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
+  // simulated XRP on Devnet: "10,000 XRP", "272.90 XRP" (whole numbers without decimals, otherwise exactly 2)
+  const digits = Number.isInteger(value) ? 0 : 2;
+  return `${new Intl.NumberFormat("en-US", { minimumFractionDigits: digits, maximumFractionDigits: 2 }).format(value)} XRP`;
 }
 
 export function formatNumber(value: number, digits = 0) {

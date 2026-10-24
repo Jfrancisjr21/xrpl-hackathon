@@ -58,10 +58,12 @@ export async function payLoan(c: Client, borrower: Wallet, loanId: string, mptId
   if (loanStatus(e) === "paid") throw new Error("Loan is already paid off");
   const value = mode === "payoff" ? payoffAmount(e) : installmentAmount(e);
   const late = mode === "installment" && now > e.NextPaymentDueDate;
+  // Payoff needs tfLoanFullPayment, or the ledger only takes one installment (confirmed on Devnet).
+  const flags = mode === "payoff" ? LoanPayFlags.tfLoanFullPayment : late ? LoanPayFlags.tfLoanLatePayment : 0;
   const tx = await submit(c, borrower, {
     TransactionType: "LoanPay", Account: borrower.address, LoanID: loanId,
     Amount: { mpt_issuance_id: mptId, value },
-    ...(late ? { Flags: LoanPayFlags.tfLoanLatePayment } : {}),
+    ...(flags ? { Flags: flags } : {}),
   });
   return { tx, amount: value };
 }

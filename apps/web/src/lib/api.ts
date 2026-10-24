@@ -3,24 +3,17 @@ import type {
   DemoWallet, HealthResponse, LoanApplicationInput, LoanView, PayMode, PayResult, RevenueView, TxResult, VaultView,
 } from "@hack/shared";
 import { samples } from "../samples";
+import { ApiError } from "./apiError";
 
 // The only file that calls fetch. Shapes come from the contract in @hack/shared.
 
 const BASE = import.meta.env.VITE_API_URL ?? ""; // empty in dev: Vite proxies /api to :3001
 
-// VITE_MOCK=true serves the reads, and the vault deposit and withdraw, from samples/ until the API routes merge.
-// Every other write always goes to the API.
+// VITE_MOCK=true serves the reads, the vault deposit and withdraw, and loan applications from samples/ until the
+// API routes merge. Every other write always goes to the API.
 const MOCK = import.meta.env.VITE_MOCK === "true";
 
-export class ApiError extends Error {
-  status: number;
-  opensAt: string | null;
-  constructor(message: string, status: number, opensAt: string | null = null) {
-    super(message);
-    this.status = status;
-    this.opensAt = opensAt;
-  }
-}
+export { ApiError };
 
 let brokerKey: string | null = null;
 export const setBrokerKey = (k: string | null) => { brokerKey = k; };
@@ -52,8 +45,8 @@ export const api = {
     MOCK ? samples.deposit(address, amount) : post<TxResult>("/vault/deposit", { address, amount }),
   withdraw: (address: string, amount: string) =>
     MOCK ? samples.withdraw(address, amount) : post<TxResult>("/vault/withdraw", { address, amount }),
-  apply: (body: LoanApplicationInput) => post<ApplicationView>("/applications", body),
-  application: (id: number) => read<ApplicationView>(`/applications/${q(id)}`, () => samples.applicationApproved),
+  apply: (body: LoanApplicationInput) => (MOCK ? samples.apply(body) : post<ApplicationView>("/applications", body)),
+  application: (id: number) => (MOCK ? samples.application(id) : http<ApplicationView>(`/applications/${q(id)}`)),
   myApplications: (borrower: string) =>
     read<ApplicationView[]>(`/applications?borrower=${q(borrower)}`, () => samples.applicationsFor(borrower)),
   loans: (borrower?: string) =>

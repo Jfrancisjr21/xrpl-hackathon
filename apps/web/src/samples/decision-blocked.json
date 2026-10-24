@@ -1,0 +1,12 @@
+{
+  "approved": false,
+  "sanctions": { "blocked": true, "source": "demo", "matchedEntry": "Demo Sanctioned Entity (test only)" },
+  "facts": null,
+  "featureSource": null,
+  "score": null,
+  "minScore": 50,
+  "interestRate": null,
+  "reasons": ["The address is on the demo sanctions list"],
+  "explanation": "This address matches an entry on the demo sanctions list, so the application was blocked before any scoring.",
+  "explanationSource": "template"
+}

@@ -35,7 +35,7 @@ export function DepositorScreen() {
   return (
     <div className="screen">
       <h1>Earn yield on {v.assetLabel}</h1>
-      <p className="lead">Depositors fund a shared vault. Approved borrowers take loans from it and pay interest; the platform keeps 10% of that interest and depositors earn the rest.</p>
+      <p className="lead">Lenders fund a shared vault. Approved borrowers take loans from it and pay interest; the platform keeps 10% of that interest and lenders earn the rest.</p>
       <PhaseBanner vault={v} />
       <ErrorBanner error={vault.error && `Couldn't refresh the vault; showing the last figures. ${vault.error}`} onRetry={vault.refresh} />
       <div className="stats">
@@ -43,9 +43,9 @@ export function DepositorScreen() {
         <Stat label="Available to lend" value={amount(v.assetsAvailable)} unit={v.assetLabel} />
         <Stat label="Lent out" value={`${v.utilizationPct.toFixed(1)}%`} />
       </div>
-      <section className="card" aria-label="Your position">
+      <section className="card tile tile-blue" aria-label="Your position">
         <h2>{wallet.label}'s position</h2>
-        <p className="num">{amount(v.position?.deposited)} {v.assetLabel} · {(v.position?.sharePct ?? 0).toFixed(1)}% of the vault</p>
+        <p className="num"><b className="figure">{amount(v.position?.deposited)}</b> {v.assetLabel} · {(v.position?.sharePct ?? 0).toFixed(1)}% of the vault</p>
       </section>
       {/* Keyed by wallet: switching wallets starts a fresh form, so no amount, error or receipt carries over. */}
       <MoveForm key={wallet.address} vault={v} address={wallet.address} label={wallet.label} now={now} onDone={vault.refresh} />

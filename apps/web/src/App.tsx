@@ -10,7 +10,7 @@ import { BrokerApp } from "./pages/broker/BrokerApp";
 
 type Tab = "depositor" | "borrower" | "broker";
 const TABS: { id: Tab; label: string }[] = [
-  { id: "depositor", label: "Depositor" },
+  { id: "depositor", label: "Lender" },
   { id: "borrower", label: "Borrower" },
   { id: "broker", label: "Broker" },
 ];

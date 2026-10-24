@@ -1,5 +1,5 @@
 import {
-  AmountInput, ApplicationView, Decision, DemoWallet, LoanApplicationInput, LoanView, VaultView,
+  AmountInput, ApplicationView, Decision, DemoWallet, LoanApplicationInput, LoanView, VaultView, estimateLoan,
   type ApplicationStatus, type HealthResponse, type TxResult, type VaultPhase,
 } from "@hack/shared";
 import { ApiError } from "../lib/apiError";
@@ -40,9 +40,10 @@ const phaseAt = (now = Date.now()): VaultPhase =>
 const deposits = new Map<string, number>(vault.position ? [[vault.position.address, Number(vault.position.deposited)]] : []);
 const others = Number(vault.assetsTotal) - [...deposits.values()].reduce((a, b) => a + b, 0);
 const total = () => others + [...deposits.values()].reduce((a, b) => a + b, 0);
-// Alice's loan is drawn once the deposit window closes; nothing is lent before that.
-const openLoans = () => (phaseAt() === "subscription" ? [] : [loan]);
-const lent = () => openLoans().reduce((sum, l) => sum + Number(l.principal), 0);
+// Loans the simulated broker originated (below). What is lent out is their outstanding principal.
+const loans: LoanView[] = [];
+const isOpenLoan = (l: LoanView) => l.status === "active" || l.status === "impaired";
+const lent = () => loans.filter(isOpenLoan).reduce((sum, l) => sum + Number(l.principal), 0);
 
 const hex = () => Array.from(crypto.getRandomValues(new Uint8Array(32)), (b) => b.toString(16).padStart(2, "0")).join("").toUpperCase();
 // No timer at all when the delay is zero (tests), so fake timers never hold a write.
@@ -107,12 +108,81 @@ const applications: ApplicationView[] = [];
 const update = (app: ApplicationView, status: ApplicationStatus, extra: Partial<ApplicationView> = {}) =>
   Object.assign(app, { status, updatedAt: new Date().toISOString(), ...extra });
 
-/** The broker approves after brokerSec; the two-signature LoanSet then takes a few seconds. */
+/** The broker approves after brokerSec; the two-signature LoanSet then takes a few seconds and the loan exists. */
 function simulateBrokerApproval(app: ApplicationView) {
   setTimeout(() => {
     update(app, "originating");
-    setTimeout(async () => update(app, "active", { loanId: hex(), tx: await confirmed() }), 3000);
+    setTimeout(async () => {
+      const tx = await confirmed();
+      const loanId = hex();
+      originate(app, loanId);
+      update(app, "active", { loanId, tx });
+    }, 3000);
   }, brokerSec * 1000);
+}
+
+// shortcut: a stand-in for the loan routes, same reason. Payments come every intervalSec (60 s, DEMO_FAST_LOANS);
+// a loan is late once its due date passes, can be defaulted after GRACE_SEC, and the simulated broker impairs it
+// brokerSec after it falls behind. Amounts are display strings with two decimals; the real ledger computes them.
+const intervalSec = 60;
+const GRACE_SEC = 60; // the ledger's default grace period
+const terms = new Map<string, { total: number; principal: number; repaid: number }>();
+const iso = (ms: number) => new Date(ms).toISOString();
+
+function originate(app: ApplicationView, loanId: string) {
+  const est = estimateLoan({ principal: app.amount, interestRate: app.decision.interestRate ?? 0, paymentTotal: app.paymentTotal, paymentIntervalSec: intervalSec });
+  terms.set(loanId, { total: app.paymentTotal, principal: Number(app.amount), repaid: Number(est.totalRepaid) });
+  loans.push({
+    loanId, applicationId: app.id, borrower: app.borrowerAddress, principal: app.amount,
+    interestRate: app.decision.interestRate ?? 0, paymentsRemaining: app.paymentTotal,
+    nextDueIso: iso(Date.now() + intervalSec * 1000), totalOwed: est.totalRepaid, status: "active",
+    installmentDue: est.periodicPayment, payoffAmount: app.amount, canImpair: false, canDefault: false,
+  });
+}
+
+/** Brings a loan's late flags up to now, and lets the simulated broker impair it once it has been late a while. */
+function age(l: LoanView, now = Date.now()) {
+  if (!isOpenLoan(l) || !l.nextDueIso) return;
+  const due = Date.parse(l.nextDueIso);
+  if (l.status === "active" && now > due + brokerSec * 1000) l.status = "impaired";
+  l.canImpair = l.status === "active" && now > due;
+  l.canDefault = now > due + GRACE_SEC * 1000;
+}
+
+function close(l: LoanView) {
+  Object.assign(l, {
+    status: "paid", principal: "0", paymentsRemaining: 0, nextDueIso: null, totalOwed: null,
+    installmentDue: null, payoffAmount: null, canImpair: false, canDefault: false,
+  });
+}
+
+/** POST /api/loans/:id/pay-due (one installment) and /pay { mode }. The ledger decides the amount (R3). */
+async function payLoan(loanId: string, mode: "installment" | "payoff"): Promise<{ tx: TxResult; amount: string }> {
+  const l = loans.find((x) => x.loanId === loanId);
+  if (!l) throw new ApiError(`Loan ${loanId} not found.`, 404);
+  age(l);
+  if (!isOpenLoan(l)) throw new ApiError("This loan is no longer open.", 409);
+  const tx = await confirmed();
+  if (mode === "payoff") {
+    const amount = l.payoffAmount!;
+    close(l);
+    return { tx, amount };
+  }
+  const t = terms.get(loanId)!;
+  const amount = l.installmentDue!;
+  const left = l.paymentsRemaining! - 1;
+  if (left === 0) { close(l); return { tx, amount }; }
+  const nextDue = Date.parse(l.nextDueIso!) + intervalSec * 1000;
+  Object.assign(l, {
+    paymentsRemaining: left, nextDueIso: iso(nextDue),
+    principal: ((t.principal * left) / t.total).toFixed(2), payoffAmount: ((t.principal * left) / t.total).toFixed(2),
+    // From the total repaid, not installment × left, so cents rounding never puts it below the principal.
+    totalOwed: ((t.repaid * left) / t.total).toFixed(2),
+    // Back on schedule: the simulated broker lifts the impairment.
+    status: l.status === "impaired" && nextDue > Date.now() ? "active" : l.status,
+  });
+  age(l);
+  return { tx, amount };
 }
 
 /** POST /api/applications: scored at once; 409 during the deposit window (with opensAt) or while one is open (R11). */
@@ -122,7 +192,10 @@ async function apply(body: LoanApplicationInput): Promise<ApplicationView> {
   await settle();
   if (phaseAt() === "subscription") throw new ApiError("Loans open when the deposit window closes.", 409, subscriptionDate);
   const { borrowerAddress, amount, paymentTotal } = input.data;
-  if (applications.some((a) => a.borrowerAddress === borrowerAddress && OPEN.includes(a.status))) {
+  // Open: still in review or being created, or active with a loan that isn't paid off or defaulted yet.
+  const stillOpen = (a: ApplicationView) =>
+    OPEN.includes(a.status) && (a.status !== "active" || loans.some((l) => l.loanId === a.loanId && isOpenLoan(l)));
+  if (applications.some((a) => a.borrowerAddress === borrowerAddress && stillOpen(a))) {
     throw new ApiError("You already have an open application.", 409);
   }
   const role = wallets.find((w) => w.address === borrowerAddress)?.role;
@@ -161,6 +234,12 @@ export const samples = {
   /** GET /api/applications?borrower=, newest first. */
   applicationsFor: (borrower: string) =>
     structuredClone(applications.filter((a) => a.borrowerAddress === borrower).sort((a, b) => b.id - a.id)),
-  loansFor: (borrower?: string) => openLoans().filter((l) => !borrower || l.borrower === borrower),
+  /** GET /api/loans?borrower= */
+  loansFor: (borrower?: string) => {
+    loans.forEach((l) => age(l));
+    return structuredClone(loans.filter((l) => !borrower || l.borrower === borrower));
+  },
+  payDue: (loanId: string) => payLoan(loanId, "installment"),
+  pay: (loanId: string, mode: "installment" | "payoff") => payLoan(loanId, mode),
   timeline: { opened, subscriptionDate, redemptionDate },
 };

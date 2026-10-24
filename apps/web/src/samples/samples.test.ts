@@ -21,40 +21,6 @@ describe("samples", () => {
   });
 });
 
-describe("mock applications", () => {
-  const addressOf = (role: string) => samples.wallets.find((w) => w.role === role)!.address;
-  const apply = (role: string, amount = "500") => samples.apply({ borrowerAddress: addressOf(role), amount, paymentTotal: 6 });
-
-  it("answers 409 with opensAt during the deposit window", async () => {
-    await expect(apply("alice")).rejects.toMatchObject({ status: 409, opensAt: samples.timeline.subscriptionDate });
-  });
-
-  it("scores each persona once loans open, refuses a second open application, and the broker approves", async () => {
-    vi.useFakeTimers();
-    at(samples.timeline.subscriptionDate, 1000);
-    const alice = await apply("alice");
-    expect(alice).toMatchObject({ status: "pending_review", amount: "500", paymentTotal: 6 });
-    expect(alice.decision.interestRate).toBe(7400);
-    expect(alice.decisionHash).toMatch(/^[0-9a-f]{64}$/);
-    await expect(apply("alice")).rejects.toMatchObject({ status: 409, opensAt: null });
-    expect((await apply("carol")).decision.interestRate).toBe(12800);
-    expect(await apply("bob")).toMatchObject({ status: "denied", decision: { approved: false, score: { total: 7 } } });
-    expect(await apply("borrower")).toMatchObject({ status: "denied", decision: { sanctions: { blocked: true, source: "demo" }, score: null } });
-    await expect(apply("depositor")).rejects.toMatchObject({ status: 400 });
-    await expect(apply("carol", "12.5")).rejects.toMatchObject({ status: 400 });
-
-    await vi.advanceTimersByTimeAsync(20_000);
-    expect((await samples.application(alice.id)).status).toBe("originating");
-    await vi.advanceTimersByTimeAsync(3_000);
-    const done = await samples.application(alice.id);
-    expect(done.status).toBe("active");
-    expect(done.loanId).toMatch(/^[0-9A-F]{64}$/);
-    expect(done.tx?.explorerUrl).toContain(done.tx?.hash);
-    expect(samples.applicationsFor(addressOf("alice")).map((a) => a.id)).toEqual([alice.id]);
-    await expect(samples.application(999)).rejects.toMatchObject({ status: 404 });
-  });
-});
-
 describe("mock vault", () => {
   it("opens as a fresh vault: deposit window running, nothing lent, no loans", () => {
     const v = samples.vaultFor(depositor);
@@ -83,14 +49,14 @@ describe("mock vault", () => {
     await expect(samples.withdraw(depositor, "100")).rejects.toThrow("Withdrawals open at the redemption date.");
   });
 
-  it("closes deposits after the window and draws Alice's loan", async () => {
+  it("closes deposits after the window; nothing is lent until a loan is originated", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     at(samples.timeline.subscriptionDate, 1000);
     await expect(samples.deposit(depositor, "100")).rejects.toThrow("Deposits are closed");
     const v = samples.vaultFor();
     expect(v.phase).toBe("investment");
-    expect(Number(v.assetsTotal) - Number(v.assetsAvailable)).toBe(Number(samples.loan.principal));
-    expect(samples.loansFor(alice)).toEqual([samples.loan]);
+    expect(v.assetsAvailable).toBe(v.assetsTotal);
+    expect(samples.loansFor(alice)).toEqual([]);
   });
 
   it("allows withdrawals in redemption, up to the position", async () => {

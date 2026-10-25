@@ -18,8 +18,11 @@ CREATE TABLE IF NOT EXISTS applications (
 );
 
 -- R11: at most one open application per borrower, enforced by the database itself.
-CREATE UNIQUE INDEX IF NOT EXISTS one_open_application_per_borrower
-  ON applications (borrower_address) WHERE status IN ('pending_review','originating','active');
+-- An active application stops counting once its loan is paid off or defaulted (loan_outcome set).
+-- Dropped and recreated on start so existing databases pick up rule changes.
+DROP INDEX IF EXISTS one_open_application_per_borrower;
+CREATE UNIQUE INDEX one_open_application_per_borrower
+  ON applications (borrower_address) WHERE status IN ('pending_review','originating','active') AND loan_outcome IS NULL;
 
 CREATE INDEX IF NOT EXISTS applications_by_status ON applications (status);
 
@@ -30,6 +33,9 @@ CREATE TABLE IF NOT EXISTS payments (
   application_id INTEGER NOT NULL REFERENCES applications (id),
   mode           TEXT NOT NULL CHECK (mode IN ('installment','payoff')),
   amount         TEXT NOT NULL,
+  principal_paid TEXT,                     -- drop in outstanding principal; the rest of amount is interest + service fee
+  interest       TEXT,
+  service_fee    TEXT,
   tx_hash        TEXT NOT NULL,
   created_at     TEXT NOT NULL
 );

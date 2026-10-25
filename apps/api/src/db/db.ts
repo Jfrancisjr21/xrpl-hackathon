@@ -12,7 +12,14 @@ export function openDb(path = process.env.DATABASE_PATH ?? "app.db"): Db {
   db.pragma("journal_mode = WAL");
   db.pragma("foreign_keys = ON");
   db.exec(readFileSync(new URL("./schema.sql", import.meta.url), "utf8"));
+  addMissingColumns(db, "payments", ["principal_paid TEXT", "interest TEXT", "service_fee TEXT"]);
   return db;
+}
+
+// CREATE TABLE IF NOT EXISTS never changes an existing table, so columns added later are added here.
+function addMissingColumns(db: Db, table: string, columns: string[]) {
+  const have = new Set((db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[]).map((c) => c.name));
+  for (const col of columns) if (!have.has(col.split(" ")[0])) db.exec(`ALTER TABLE ${table} ADD COLUMN ${col}`);
 }
 
 // ---------- applications ----------
@@ -78,6 +85,16 @@ export function getApplication(db: Db, id: number): ApplicationRow | undefined {
   return db.prepare("SELECT * FROM applications WHERE id = ?").get(id) as ApplicationRow | undefined;
 }
 
+export function getApplicationByLoan(db: Db, loanId: string): ApplicationRow | undefined {
+  return db.prepare("SELECT * FROM applications WHERE loan_id = ?").get(loanId) as ApplicationRow | undefined;
+}
+
+// R11: in review, originating, or active with a loan that has not ended yet.
+export function hasOpenApplication(db: Db, address: string): boolean {
+  return db.prepare(`SELECT 1 FROM applications WHERE borrower_address = ?
+                     AND status IN ('pending_review','originating','active') AND loan_outcome IS NULL`).get(address) !== undefined;
+}
+
 export function listApplications(db: Db, filter: { status?: ApplicationStatus; borrower?: string } = {}): ApplicationRow[] {
   return db
     .prepare(`SELECT * FROM applications
@@ -133,13 +150,33 @@ export function isBanned(db: Db, address: string): boolean {
 
 // ---------- payments (R10) ----------
 
-export function recordPayment(db: Db, p: { loanId: string; applicationId: number; mode: PayMode; amount: string; txHash: string }): void {
-  db.prepare("INSERT INTO payments (loan_id, application_id, mode, amount, tx_hash, created_at) VALUES (?, ?, ?, ?, ?, ?)")
-    .run(p.loanId, p.applicationId, p.mode, p.amount, p.txHash, now());
+export function recordPayment(
+  db: Db,
+  p: { loanId: string; applicationId: number; mode: PayMode; amount: string; txHash: string; principalPaid?: string; interest?: string; serviceFee?: string },
+): void {
+  db.prepare(`INSERT INTO payments (loan_id, application_id, mode, amount, principal_paid, interest, service_fee, tx_hash, created_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+    .run(p.loanId, p.applicationId, p.mode, p.amount, p.principalPaid ?? null, p.interest ?? null, p.serviceFee ?? null, p.txHash, now());
 }
 
-export function listPayments(db: Db): { loan_id: string; application_id: number; mode: PayMode; amount: string; tx_hash: string; created_at: string }[] {
-  return db.prepare("SELECT loan_id, application_id, mode, amount, tx_hash, created_at FROM payments ORDER BY id").all() as never;
+// Totals for the revenue panel. Payments recorded before the split was tracked count as 0 interest.
+export function paymentTotals(db: Db): { count: number; interest: number; serviceFees: number } {
+  const r = db.prepare(`SELECT COUNT(*) AS count, COALESCE(SUM(CAST(interest AS REAL)), 0) AS interest,
+                               COALESCE(SUM(CAST(service_fee AS REAL)), 0) AS serviceFees FROM payments`).get() as
+    { count: number; interest: number; serviceFees: number };
+  return r;
+}
+
+export function originatedLoanCount(db: Db): number {
+  return (db.prepare("SELECT COUNT(*) AS n FROM applications WHERE loan_id IS NOT NULL").get() as { n: number }).n;
+}
+
+export function listPayments(db: Db): {
+  loan_id: string; application_id: number; mode: PayMode; amount: string;
+  principal_paid: string | null; interest: string | null; service_fee: string | null; tx_hash: string; created_at: string;
+}[] {
+  return db.prepare(`SELECT loan_id, application_id, mode, amount, principal_paid, interest, service_fee, tx_hash, created_at
+                     FROM payments ORDER BY id`).all() as never;
 }
 
 // ---------- audit log ----------

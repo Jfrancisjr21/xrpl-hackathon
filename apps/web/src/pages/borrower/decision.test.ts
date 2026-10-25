@@ -1,7 +1,7 @@
 import type { Decision } from "@hack/shared";
 import { describe, expect, it } from "vitest";
 import { samples } from "../../samples";
-import { reapplyTerms } from "./DecisionCard";
+import { reapplyTerms } from "./status";
 
 const denied = (over: Partial<Decision>): Decision => ({
   ...samples.decisions.carol!, approved: false, outcome: "denied", interestRate: null, ...over,

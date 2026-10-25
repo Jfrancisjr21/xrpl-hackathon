@@ -1,11 +1,11 @@
-import { estimateLoan, type ApplicationView, type Decision } from "@hack/shared";
+import { estimateLoan, type ApplicationView } from "@hack/shared";
 import { api } from "../../lib/api";
 import { usePoll, useTx } from "../../lib/hooks";
 import { amount, pct } from "../../lib/format";
 import { ErrorBanner } from "../../components/ErrorBanner";
 import { StatusBadge } from "../../components/StatusBadge";
 import { CopyButton } from "../../components/CopyButton";
-import { verdictOf } from "./status";
+import { reapplyTerms, verdictOf } from "./status";
 
 // The server sets the payment interval; with DEMO_FAST_LOANS it is 60 seconds, so estimates use that.
 const DEMO_INTERVAL_SEC = 60;
@@ -16,16 +16,6 @@ const PARTS = [
   { key: "credential", label: "Verified credential", max: 20 },
 ] as const;
 const badgeValue = { Approved: "approved", Denied: "rejected", Blocked: "flagged", "Secured offer": "review" } as const;
-
-/** Terms that fit the level, when a denial is only about the amount or the number of payments; else null. */
-export function reapplyTerms(app: Pick<ApplicationView, "amount" | "paymentTotal">, d: Decision): { amount: string; paymentTotal: number } | null {
-  if (d.outcome !== "denied" || !d.approvalLevel || d.maxAmount == null || d.maxPaymentTotal == null) return null;
-  const maxPayments = d.maxPaymentTotal;
-  const maxAmount = Math.floor(Number(d.maxAmount));
-  if (maxAmount < 1) return null; // the vault cannot fund anything right now
-  if (app.paymentTotal <= maxPayments && Number(app.amount) <= maxAmount) return null; // denied for another reason
-  return { amount: String(Math.min(Number(app.amount), maxAmount)), paymentTotal: Math.min(app.paymentTotal, maxPayments) };
-}
 
 /** What the agent decided and why: verdict, score, sanctions, rate, the loan's cost and the decision receipt. */
 export function DecisionCard({ app, assetLabel, onReapplied }: { app: ApplicationView; assetLabel: string; onReapplied?: () => Promise<void> }) {

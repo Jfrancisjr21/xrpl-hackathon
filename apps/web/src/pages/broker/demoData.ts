@@ -31,6 +31,16 @@ export const demoApplications: ApplicationView[] = [
     status: "pending_review",
     createdAt: minutesFromNow(-8),
     explanation: "Stable repayment capacity, established activity and sufficient vault headroom support approval.",
+    credit: {
+      provider: "demo", pullType: "soft", pulledAt: minutesFromNow(-8), fileFound: true,
+      scores: [
+        { bureau: "experian", model: "FICO 8", score: 742 },
+        { bureau: "equifax", model: "FICO 8", score: 775 },
+        { bureau: "transunion", model: "FICO 8", score: 780 },
+      ],
+      middleScore: 775,
+      reasonCodes: ["Amount owed on accounts too high"],
+    },
     featureSource: "Demo profile (seeded Devnet persona)",
     sanctionsSources: ["Demo sanctions list (seeded exact match)"],
     scoreParts: [
@@ -53,6 +63,16 @@ export const demoApplications: ApplicationView[] = [
     status: "pending_review",
     createdAt: minutesFromNow(-21),
     explanation: "The application clears policy but has a thinner activity history. Manual review is recommended.",
+    credit: {
+      provider: "demo", pullType: "soft", pulledAt: minutesFromNow(-21), fileFound: true,
+      scores: [
+        { bureau: "experian", model: "FICO 8", score: 590 },
+        { bureau: "equifax", model: "FICO 8", score: 600 },
+        { bureau: "transunion", model: "FICO 8", score: 612 },
+      ],
+      middleScore: 600,
+      reasonCodes: ["Too many accounts with balances"],
+    },
     featureSource: "Demo profile (seeded Devnet persona)",
     sanctionsSources: ["Demo sanctions list (seeded exact match)"],
     scoreParts: [
@@ -75,6 +95,10 @@ export const demoApplications: ApplicationView[] = [
     status: "denied",
     createdAt: minutesFromNow(-34),
     explanation: "The score is below the minimum policy threshold of 50, so the agent denied the application.",
+    credit: {
+      provider: "demo", pullType: "soft", pulledAt: minutesFromNow(-34), fileFound: false,
+      scores: [], middleScore: null, reasonCodes: [],
+    },
     featureSource: "Demo profile (seeded Devnet persona)",
     sanctionsSources: ["Demo sanctions list (seeded exact match)"],
     scoreParts: [
@@ -97,6 +121,7 @@ export const demoApplications: ApplicationView[] = [
     status: "denied",
     createdAt: minutesFromNow(-46),
     explanation: "The sanctions gate matched this address. Scoring stopped before a credit decision was produced.",
+    credit: null,
     featureSource: "Demo profile (seeded Devnet persona)",
     sanctionsSources: ["Demo sanctions list (seeded exact match)"],
     scoreParts: [],

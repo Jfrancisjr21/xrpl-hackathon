@@ -223,6 +223,7 @@ th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; }
 .evidence-source div { display: flex; justify-content: space-between; gap: 16px; font-size: 12px; }
 .evidence-source dt { color: var(--muted); }
 .evidence-source dd { margin: 0; text-align: right; }
+.credit-evidence dd { max-width: 65%; overflow-wrap: anywhere; }
 .score-parts { display: grid; }
 .score-parts > div { min-height: 48px; display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--rule); }
 .score-parts > div:first-child { border-top: 0; }

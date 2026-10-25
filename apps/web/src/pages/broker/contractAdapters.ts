@@ -28,6 +28,7 @@ export function applicationFromContract(application: ContractApplication): Appli
     status: application.status,
     createdAt: application.createdAt,
     explanation: application.decision.explanation,
+    credit: application.decision.credit ?? null,
     featureSource: application.decision.featureSource ?? "Sanctions gate",
     sanctionsSources: application.decision.sanctions.source
       ? [application.decision.sanctions.matchedEntry ?? application.decision.sanctions.source]

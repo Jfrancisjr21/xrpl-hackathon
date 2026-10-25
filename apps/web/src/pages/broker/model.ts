@@ -1,3 +1,5 @@
+import type { CreditSummary } from "@hack/shared";
+
 export type ApplicationStatus = "denied" | "pending_review" | "rejected" | "originating" | "active" | "failed";
 export type ApplicationFilter = "pending_review" | "all";
 export type ApplicationDecision = "approve" | "reject";
@@ -21,6 +23,7 @@ export interface ApplicationView {
   status: ApplicationStatus;
   createdAt: string;
   explanation: string;
+  credit: CreditSummary | null;
   featureSource: string;
   sanctionsSources: string[];
   scoreParts: Array<{ label: string; points: number; note: string }>;

@@ -5,7 +5,19 @@ import { loanPermissions } from "./model";
 
 describe("broker contract adapters", () => {
   it("converts shared application amounts and rates for the broker view", () => {
-    const application = applicationFromContract(samples.applicationApproved);
+    const credit = {
+      provider: "isoftpull" as const,
+      pullType: "soft" as const,
+      pulledAt: "2026-10-25T02:49:16.181Z",
+      fileFound: true,
+      scores: [{ bureau: "experian" as const, model: "FICO 8", score: 775 }],
+      middleScore: 775,
+      reasonCodes: ["Amount owed on accounts too high"],
+    };
+    const application = applicationFromContract({
+      ...samples.applicationApproved,
+      decision: { ...samples.applicationApproved.decision, credit },
+    });
 
     expect(application).toMatchObject({
       id: "1",
@@ -17,6 +29,7 @@ describe("broker contract adapters", () => {
       decisionHash: samples.applicationApproved.decisionHash,
       loanId: samples.applicationApproved.loanId,
       txHash: samples.applicationApproved.tx?.hash,
+      credit,
     });
   });
 

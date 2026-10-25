@@ -1,4 +1,6 @@
-# [APP NAME]
+# Confiance
+
+*Confiance* is French for trust.
 
 A lending app on the XRP Ledger. People deposit money into a shared pool, borrowers apply for loans, and the app decides who should get one. A human broker approves every loan, and each decision is saved on the ledger so anyone can check it later.
 

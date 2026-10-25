@@ -29,7 +29,7 @@ function UserApp() {
     <WalletProvider wallets={wallets.data ?? []}>
       <div className="shell">
         <header className="shell-bar">
-          <div className="product-lockup"><span className="product-mark" aria-hidden="true"><span /></span><span>XRPL Lending</span></div>
+          <div className="product-lockup"><span className="product-mark" aria-hidden="true"><span /></span><span>Confiance</span></div>
           <nav className="shell-tabs" aria-label="Screens">
             {TABS.map((t) => (
               <button key={t.id} type="button" className="shell-tab" aria-current={tab === t.id ? "page" : undefined} onClick={() => setTab(t.id)}>

@@ -80,7 +80,7 @@ function BrokerGate({ onUnlock, onPreview }: { onUnlock: (key: string) => void; 
       <section className="gate-panel" aria-labelledby="gate-title">
         <div className="product-lockup">
           <span className="product-mark" aria-hidden="true"><span /></span>
-          <span>XRPL Lending</span>
+          <span>Confiance</span>
         </div>
         <h1 id="gate-title">Broker access</h1>
         <p>Review lending decisions and manage live Devnet loans from one controlled workspace.</p>
@@ -1299,10 +1299,10 @@ export function BrokerApp() {
 
   return (
     <div className="app-shell">
-      <header className="mobile-header"><button type="button" onClick={() => setMenuOpen(true)}>Menu</button><strong>XRPL Lending</strong><span>{formatNumber(pendingCount)}</span></header>
+      <header className="mobile-header"><button type="button" onClick={() => setMenuOpen(true)}>Menu</button><strong>Confiance</strong><span>{formatNumber(pendingCount)}</span></header>
       <aside className={`sidebar ${menuOpen ? "sidebar--open" : ""}`}>
         <button className="sidebar-close" type="button" onClick={() => setMenuOpen(false)}>Close</button>
-        <div className="product-lockup"><span className="product-mark" aria-hidden="true"><span /></span><span>XRPL Lending</span></div>
+        <div className="product-lockup"><span className="product-mark" aria-hidden="true"><span /></span><span>Confiance</span></div>
         <div className="workspace-label"><span>Broker workspace</span><strong>Devnet operations</strong></div>
         <nav aria-label="Broker navigation">
           {tabs.map((item) => (

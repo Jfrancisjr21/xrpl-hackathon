@@ -26,7 +26,7 @@ export function vaultRouter({ db, ledger }: Deps) {
       if (!ledger.getWallets().some((w) => w.address === address)) {
         throw new HttpError(400, "Unknown wallet", { fields: { address: "must be one of the demo wallets from GET /api/wallets" } });
       }
-      // Deposits only work in the subscription phase and withdrawals in the redemption phase; the ledger enforces both.
+      // Deposits only in the deposit window; withdrawals in the window or after redemption. A wrong phase is a 409 with opensAt.
       const tx = await onLedger(() => (kind === "deposit" ? ledger.deposit(address, amount) : ledger.withdraw(address, amount)));
       audit(db, { actor: "depositor", action: kind === "deposit" ? "vault_deposit" : "vault_withdraw", tx, note: `${amount} by ${address}` });
       res.json(tx);

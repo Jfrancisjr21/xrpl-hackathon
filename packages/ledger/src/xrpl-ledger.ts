@@ -123,12 +123,22 @@ export class XrplLedger implements LedgerService {
     };
   }
 
+  // The vault phase decides what moves: deposits only in the deposit window; withdrawals in the window and after
+  // the redemption date, never while the vault is lending (confirmed on Devnet). Checked first so the API answers 409.
   async deposit(address: string, amount: string) {
     const s = this.ready();
+    const now = await ledgerCloseTime(await this.c());
+    if (vaultPhase(now, s.subscriptionDate, s.redemptionDate) !== "subscription") {
+      throw new LedgerNotReadyError(`Deposits closed when the deposit window ended at ${iso(s.subscriptionDate)}. Run pnpm ledger:new-vault for a new window`, null);
+    }
     return toTx(await vaultDeposit(await this.c(), this.walletFor(address), s.vaultId, s.mptId, amount));
   }
   async withdraw(address: string, amount: string) {
     const s = this.ready();
+    const now = await ledgerCloseTime(await this.c());
+    if (vaultPhase(now, s.subscriptionDate, s.redemptionDate) === "investment") {
+      throw new LedgerNotReadyError("Withdrawals are locked while the vault is lending. They open at the redemption date", iso(s.redemptionDate));
+    }
     return toTx(await vaultWithdraw(await this.c(), this.walletFor(address), s.vaultId, s.mptId, amount));
   }
   async depositCover(amount: string) {

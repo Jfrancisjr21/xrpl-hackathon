@@ -79,6 +79,8 @@ export function snapshotFromContract(
     vaultPhase: vault.phase,
     interestCollected: amount(revenue.interestCollected),
     platformFee: amount(revenue.platformFees),
+    serviceFees: amount(revenue.serviceFees ?? "0"),
+    originationFees: amount(revenue.originationFees ?? "0"),
     projectedFee: null,
     feeRate: broker.managementFeeRate / 1_000,
     revenueSource: "measured",

@@ -70,6 +70,8 @@ export interface BrokerSnapshot {
   vaultPhase: "subscription" | "investment" | "redemption";
   interestCollected: number;
   platformFee: number;
+  serviceFees: number; // flat fee on every payment
+  originationFees: number; // flat fee taken from each loan's principal
   projectedFee: number | null;
   feeRate: number;
   revenueSource: "measured" | "estimated";

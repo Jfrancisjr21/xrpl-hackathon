@@ -8,6 +8,7 @@ import { agentRouter, demoRouter } from "./routes/agent";
 import { applicationsRouter } from "./routes/applications";
 import { brokerRouter } from "./routes/broker";
 import { loansRouter } from "./routes/loans";
+import { passportsRouter, scoreTokensRouter, verifyRouter } from "./routes/passports";
 import { vaultRouter } from "./routes/vault";
 import type { Underwrite } from "./services/underwriting";
 
@@ -56,6 +57,10 @@ export function createApp(deps: Deps) {
   app.use("/api/broker", brokerRouter(deps));
   app.use("/api/agent", agentRouter(deps));
   app.use("/api/demo", demoRouter(deps));
+  // Feature 5: score passport. verify and passports are public (no broker key).
+  app.use("/api/score-tokens", scoreTokensRouter(deps));
+  app.use("/api/verify", verifyRouter(deps));
+  app.use("/api/passports", passportsRouter(deps));
 
   app.use(errorHandler); // last: turns every thrown error into ErrorResponse
   return app;

@@ -6,6 +6,7 @@ import type { Deps } from "../app";
 import { audit, createApplication, getApplication, hasOpenApplication, isBanned, listApplications, loansPaidOff, toView, transition } from "../db/db";
 import { HttpError, LedgerError, onLedger, requireBrokerKey, validate } from "../middleware";
 import { agentView } from "./agent";
+import { issuePassport } from "../services/passport";
 
 // Payment interval and grace period. DEMO_FAST_LOANS makes payments due every 60 s so impair and default can be shown live.
 export function loanTiming() {
@@ -106,6 +107,8 @@ export function applicationsRouter({ db, ledger, underwrite }: Deps) {
       const active = transition(db, id, ["originating"], "active", { loanId, tx })!;
       audit(db, { actor: "broker", action: "application_approved", applicationId: id });
       audit(db, { actor: "broker", action: "loan_originated", applicationId: id, loanId, tx });
+      // Feature 5: mint the score passport in the background (10 to 15 s); the response does not wait for it.
+      void issuePassport(db, ledger, active);
       res.json(toView(active));
     } catch (e) {
       if (e instanceof LedgerNotReadyError) {

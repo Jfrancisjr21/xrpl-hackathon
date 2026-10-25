@@ -52,8 +52,8 @@ export function DecisionCard({ app, assetLabel }: { app: ApplicationView; assetL
             ))}
           </dl>
         </div>
-      ) : (
-        <p className="hint">Not scored: the sanctions check stopped this application first.</p>
+      ) : d.approved ? null : (
+        <p className="hint">Not scored: {d.sanctions.blocked ? "the sanctions check" : d.banned ? "the ban list" : "a check before scoring"} stopped this application first.</p>
       )}
 
       <p className={d.sanctions.blocked ? "sanctions sanctions--blocked" : "sanctions"}>

@@ -499,7 +499,7 @@ function ApplicationDetail({
       <section className="detail-section">
         <h3>Score evidence</h3>
         {application.scoreParts.length ? (
-          <div className="score-parts">
+          <div className="broker-score-parts">
             {application.scoreParts.map((part) => (
               <div key={part.label}><span><strong>{part.label}</strong><small>{part.note}</small></span><b className="num">+{formatNumber(part.points)}</b></div>
             ))}

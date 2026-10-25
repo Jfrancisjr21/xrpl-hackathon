@@ -477,6 +477,19 @@ function ApplicationDetail({
         </dl>
       </section>
       <section className="detail-section">
+        <h3>Credit evidence</h3>
+        {application.credit ? (
+          <dl className="evidence-source credit-evidence">
+            <div><dt>Provider</dt><dd>{application.credit.provider === "isoftpull" ? "iSoftpull" : "Demo fallback"}</dd></div>
+            <div><dt>Pull type</dt><dd>{application.credit.pullType === "soft" ? "Soft pull" : "Hard pull"}</dd></div>
+            <div><dt>Credit file</dt><dd>{application.credit.fileFound ? "Found" : "Not found"}</dd></div>
+            <div><dt>Middle score</dt><dd className="num">{application.credit.middleScore ?? "—"}</dd></div>
+            <div><dt>Pulled</dt><dd><time dateTime={application.credit.pulledAt}>{formatDate(application.credit.pulledAt)}</time></dd></div>
+            <div><dt>Reason codes</dt><dd>{application.credit.reasonCodes.length ? application.credit.reasonCodes.join("; ") : "None returned"}</dd></div>
+          </dl>
+        ) : <div className="empty-state">No credit pull was recorded for this decision.</div>}
+      </section>
+      <section className="detail-section">
         <h3>Score evidence</h3>
         {application.scoreParts.length ? (
           <div className="score-parts">

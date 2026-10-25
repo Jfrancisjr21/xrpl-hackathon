@@ -1,0 +1,12 @@
+{
+  "approved": true,
+  "sanctions": { "blocked": false },
+  "facts": { "ageDays": 220, "txCountSample": 87, "trustlineCount": 2, "hasCredential": true },
+  "featureSource": "demo-profile",
+  "score": { "age": 18, "activity": 13, "trustlines": 10, "credential": 20, "total": 61 },
+  "minScore": 50,
+  "interestRate": 12800,
+  "reasons": ["Score 61 is above the minimum of 50", "Holds a verified credential"],
+  "explanation": "Carol has a mid-range history and a verified credential, so the agent approved her at a higher rate of 12.8%.",
+  "explanationSource": "template"
+}

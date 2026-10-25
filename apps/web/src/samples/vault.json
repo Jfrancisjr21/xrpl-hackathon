@@ -2,11 +2,11 @@
   "vaultId": "64FD436C53233E7B46A246BD59242574860F23D5724C8F354A4D9BC8095CD187",
   "assetLabel": "XRP",
   "assetsTotal": "10000",
-  "assetsAvailable": "9500",
+  "assetsAvailable": "10000",
   "lossUnrealized": "0",
-  "utilizationPct": 5,
-  "phase": "investment",
-  "subscriptionDate": "2026-10-24T15:00:00Z",
-  "redemptionDate": "2026-10-25T21:00:00Z",
+  "utilizationPct": 0,
+  "phase": "subscription",
+  "subscriptionDate": null,
+  "redemptionDate": null,
   "position": { "address": "r8AqjCgQk98JKVvZQittEGu8XPJAakMcHB", "deposited": "2500", "sharePct": 25 }
 }

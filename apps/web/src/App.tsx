@@ -10,7 +10,7 @@ import { BrokerApp } from "./pages/broker/BrokerApp";
 
 type Tab = "depositor" | "borrower";
 const TABS: { id: Tab; label: string }[] = [
-  { id: "depositor", label: "Depositor" },
+  { id: "depositor", label: "Lender" },
   { id: "borrower", label: "Borrower" },
 ];
 
@@ -47,7 +47,7 @@ function UserApp() {
             The active wallet lives in WalletProvider and survives reloads too. */}
         <main>
           <section className="shell-main" hidden={tab !== "depositor"}>
-            <ErrorBanner error={wallets.error} onRetry={wallets.refresh} />
+            <ErrorBanner error={wallets.error && `Couldn't load the demo wallets. ${wallets.error}`} onRetry={wallets.refresh} />
             <DepositorScreen />
           </section>
           <section className="shell-main" hidden={tab !== "borrower"}>

@@ -1,5 +1,6 @@
 import { api } from "../../lib/api";
 import { usePoll } from "../../lib/hooks";
+import { ASSET } from "../../lib/format";
 import { useWallet } from "../../lib/wallet";
 import { ErrorBanner } from "../../components/ErrorBanner";
 import { WalletPicker } from "./WalletPicker";
@@ -22,7 +23,7 @@ export function BorrowerScreen() {
   const loans = usePoll(() => (borrower ? api.loans(borrower.address) : Promise.resolve([])), [borrower?.address], 5000);
   const latest = latestOf(apps.data);
   const loan = pickLoan(loans.data);
-  const assetLabel = vault.data?.assetLabel ?? "";
+  const assetLabel = ASSET;
   const loansOpenAt = vault.data?.phase === "subscription" ? vault.data.subscriptionDate : null;
   // A new application once the last one ended without a loan, or its loan is paid off or defaulted.
   const loanClosed = latest?.status === "active" && loan?.applicationId === latest.id && !isOpen(loan);

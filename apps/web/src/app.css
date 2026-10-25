@@ -238,6 +238,7 @@ th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; }
 .receipt-list code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .outcome-section { border-left: 2px solid var(--negative); padding-left: 12px; }
 .inline-error { margin-top: 18px; border: 1px solid #efb8ba; border-radius: var(--radius-control); background: #fff5f5; color: #831c1e; padding: 10px 12px; font-size: 13px; }
+.action-success { margin-top: 18px; border: 1px solid #a7d7bd; border-radius: var(--radius-control); background: #f1faf5; color: #185c37; padding: 10px 12px; font-size: 13px; }
 .action-progress { margin-top: 18px; border: 1px solid #bfd3ee; border-radius: var(--radius-control); background: #f3f7fc; color: #24466f; padding: 10px 12px; font-size: 13px; }
 .decision-actions { display: grid; gap: 9px; margin-top: 24px; }
 .decision-actions label { font-size: 13px; font-weight: 500; }

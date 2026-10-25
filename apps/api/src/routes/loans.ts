@@ -1,8 +1,7 @@
 import { Router } from "express";
 import { LoanIdParam, LoanQuery, PayRequest, type LoanView, type PayMode, type PayResult } from "@hack/shared";
 import type { Deps } from "../app";
-// shortcut: the fee constants are not exported from @hack/ledger's index yet; ask Juan to export them.
-import { SERVICE_FEE } from "@hack/ledger/src/loan";
+import { SERVICE_FEE } from "@hack/ledger";
 import { audit, closeLoan, getApplicationByLoan, listApplications, recordPayment } from "../db/db";
 import { HttpError, onLedger, requireBrokerKey, validate } from "../middleware";
 
@@ -93,6 +92,30 @@ export function loansRouter({ db, ledger }: Deps) {
     const tx = await onLedger(() => ledger.manageLoan(loanId, "default"));
     closeLoan(db, loanId, "defaulted"); // also puts the borrower on the ban list
     audit(db, { actor: "broker", action: "loan_defaulted", applicationId: row.id, loanId, tx, note: `${row.borrower_address} added to the ban list` });
+    res.json(tx);
+  });
+
+  router.post("/:id/unimpair", requireBrokerKey, validate({ params: LoanIdParam }), async (req, res) => {
+    const loanId = req.params.id as string;
+    const row = ourLoan(loanId);
+    const loan = await onLedger(() => ledger.getLoan(loanId));
+    if (loan.status !== "impaired") throw new HttpError(409, `Loan is ${loan.status}; only an impaired loan can be unimpaired`);
+    const tx = await onLedger(() => ledger.manageLoan(loanId, "unimpair"));
+    audit(db, { actor: "broker", action: "loan_unimpaired", applicationId: row.id, loanId, tx });
+    res.json(tx);
+  });
+
+  // Removes a closed loan from the ledger. The application row stays, with its outcome, for the history and the ban list.
+  router.post("/:id/delete", requireBrokerKey, validate({ params: LoanIdParam }), async (req, res) => {
+    const loanId = req.params.id as string;
+    const row = ourLoan(loanId);
+    const loan = await onLedger(() => ledger.getLoan(loanId));
+    if (loan.status !== "paid" && loan.status !== "defaulted") {
+      throw new HttpError(409, `Loan is ${loan.status}; only a paid or defaulted loan can be deleted`);
+    }
+    const tx = await onLedger(() => ledger.deleteLoan(loanId));
+    if (!row.loan_outcome) closeLoan(db, loanId, loan.status);
+    audit(db, { actor: "broker", action: "loan_deleted", applicationId: row.id, loanId, tx });
     res.json(tx);
   });
 

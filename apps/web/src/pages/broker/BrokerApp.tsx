@@ -665,7 +665,7 @@ function LoansTable({ loans, alerts, selectedId, onSelect }: { loans: LoanView[]
   );
 }
 
-function LoanDetail({ loan, application, live, error, pendingAction, onAction, onBack }: { loan: LoanView; application: ApplicationView | null; live: boolean; error: string | null; pendingAction: LoanAction | null; onAction: (action: LoanAction) => void; onBack: () => void }) {
+function LoanDetail({ loan, application, error, pendingAction, onAction, onBack }: { loan: LoanView; application: ApplicationView | null; live: boolean; error: string | null; pendingAction: LoanAction | null; onAction: (action: LoanAction) => void; onBack: () => void }) {
   const permissions = loanPermissions(loan);
   const [confirmingAction, setConfirmingAction] = useState<LoanAction | null>(null);
   const confirmation = confirmingAction ? loanActionCopy[confirmingAction] : null;
@@ -694,8 +694,8 @@ function LoanDetail({ loan, application, live, error, pendingAction, onAction, o
         <div className="action-stack">
           <button className="button button--secondary" type="button" disabled={!permissions.canImpair || pendingAction !== null} title={permissions.canImpair ? "Mark the late loan as impaired" : "Available only after a payment is late"} onClick={() => setConfirmingAction("impair")}>Impair loan</button>
           <button className="button button--danger" type="button" disabled={!permissions.canDefault || pendingAction !== null} title={permissions.canDefault ? "Default after the grace period" : "Available after due date and grace period"} onClick={() => setConfirmingAction("default")}>Default loan</button>
-          <button className="button button--secondary" type="button" disabled={live || !permissions.canUnimpair || pendingAction !== null} title={live ? "The current API supports impair and default only" : permissions.canUnimpair ? "Return this loan to active status" : "Available only for impaired loans"} onClick={() => setConfirmingAction("unimpair")}>Remove impairment</button>
-          <button className="text-button" type="button" disabled={live || !permissions.canDelete || pendingAction !== null} title={live ? "The current API supports impair and default only" : permissions.canDelete ? "Delete this closed loan" : "Available only for paid or defaulted loans"} onClick={() => setConfirmingAction("delete")}>Delete closed loan</button>
+          <button className="button button--secondary" type="button" disabled={!permissions.canUnimpair || pendingAction !== null} title={permissions.canUnimpair ? "Return this loan to active status" : "Available only for impaired loans"} onClick={() => setConfirmingAction("unimpair")}>Remove impairment</button>
+          <button className="text-button" type="button" disabled={!permissions.canDelete || pendingAction !== null} title={permissions.canDelete ? "Delete this closed loan" : "Available only for paid or defaulted loans"} onClick={() => setConfirmingAction("delete")}>Delete closed loan</button>
         </div>
       </section>
       {error ? <div className="inline-error" role="alert">{error}</div> : null}

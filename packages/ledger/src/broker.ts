@@ -5,7 +5,8 @@ export const PLATFORM_FEE_RATE = 10000;      // 10 percent of interest (the maxi
 export const COVER_RATE_MINIMUM = 10000;     // cover must be at least 10 percent of debt
 export const COVER_RATE_LIQUIDATION = 10000; // share of minimum cover used on a default
 
-export async function createLoanBroker(c: Client, owner: Wallet, vaultId: string) {
+// debtMaximum caps the broker's total outstanding debt on the ledger itself.
+export async function createLoanBroker(c: Client, owner: Wallet, vaultId: string, debtMaximum: string) {
   const r = await submit(c, owner, {
     TransactionType: "LoanBrokerSet",
     Account: owner.address,
@@ -13,6 +14,7 @@ export async function createLoanBroker(c: Client, owner: Wallet, vaultId: string
     ManagementFeeRate: PLATFORM_FEE_RATE,
     CoverRateMinimum: COVER_RATE_MINIMUM,
     CoverRateLiquidation: COVER_RATE_LIQUIDATION,
+    DebtMaximum: debtMaximum,
   });
   return findCreated(r.meta, "LoanBroker").LedgerIndex; // the LoanBrokerID
 }

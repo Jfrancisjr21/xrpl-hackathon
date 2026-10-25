@@ -5,6 +5,7 @@ import { LoanView, PayResult, VaultView, type Decision } from "@hack/shared";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "../app";
 import { testUnderwrite } from "./test-underwrite";
+import { createHash } from "node:crypto";
 import { createApplication, isBanned, listAudit, listPayments, loansPaidOff, openDb, transition, type Db } from "../db/db";
 
 const KEY = "test-broker-key-123";
@@ -41,7 +42,10 @@ const fakeLedger = {
     return { tx: tx("2"), amount: mode === "payoff" ? "520" : "180" };
   },
   manageLoan: async (_id: string, action: string) => { calls.push(action); return tx("3"); },
+  deleteLoan: async () => { calls.push("delete"); return tx("4"); },
+  getDecisionMemo: async () => memo,
 } as unknown as LedgerService;
+let memo: string | null = null;
 
 const decision: Decision = {
   approved: true, sanctions: { blocked: false }, facts: null, featureSource: null, score: null, minScore: 50,
@@ -173,5 +177,48 @@ describe("impair and default", () => {
     expect(listAudit(db)[0]).toMatchObject({ action: "loan_defaulted", note: `${ALICE} added to the ban list` });
     const again = await call("/api/applications", { method: "POST", body: { borrowerAddress: ALICE, amount: "100", paymentTotal: 1 } });
     expect(again.body).toMatchObject({ status: "denied", decision: { reasons: ["Address is on the ban list after a defaulted loan with us"] } });
+  });
+});
+
+describe("unimpair and delete", () => {
+  it("unimpair only an impaired loan", async () => {
+    originated();
+    expect((await call(`/api/loans/${LOAN}/unimpair`, { method: "POST", key: true })).status).toBe(409);
+    loan = snapshot({ status: "impaired" });
+    const r = await call(`/api/loans/${LOAN}/unimpair`, { method: "POST", key: true });
+    expect(r.status).toBe(200);
+    expect(calls).toEqual(["unimpair"]);
+    expect(listAudit(db).map((e) => e.action)).toContain("loan_unimpaired");
+  });
+
+  it("delete only a paid or defaulted loan, and keep the history", async () => {
+    originated();
+    expect((await call(`/api/loans/${LOAN}/delete`, { method: "POST", key: true })).status).toBe(409);
+    expect((await call(`/api/loans/${LOAN}/delete`, { method: "POST" })).status).toBe(401);
+    loan = snapshot({ status: "paid", paymentsRemaining: 0 });
+    expect((await call(`/api/loans/${LOAN}/delete`, { method: "POST", key: true })).status).toBe(200);
+    expect(calls).toEqual(["delete"]);
+    expect(loansPaidOff(db, ALICE)).toBe(1);
+  });
+});
+
+describe("decision receipt (Feature 1)", () => {
+  it("recomputes the hash and compares it with the LoanSet memo", async () => {
+    const hash = createHash("sha256").update(JSON.stringify(decision)).digest("hex");
+    const a = createApplication(db, { borrowerAddress: ALICE, amount: "500", paymentTotal: 3, status: "pending_review", decision, decisionHash: hash });
+    const before = (await call(`/api/applications/${a.id}/receipt`)).body;
+    expect(before).toMatchObject({ applicationId: a.id, decisionHash: hash, recomputedHash: hash, matches: true, ledgerMemo: null, memoMatches: null });
+
+    transition(db, a.id, ["pending_review"], "originating");
+    transition(db, a.id, ["originating"], "active", { loanId: LOAN, tx: tx("9") });
+    memo = hash;
+    expect((await call(`/api/applications/${a.id}/receipt`)).body).toMatchObject({ matches: true, memoMatches: true, loanId: LOAN });
+    memo = "0".repeat(64);
+    expect((await call(`/api/applications/${a.id}/receipt`)).body.memoMatches).toBe(false);
+    memo = null;
+  });
+
+  it("answers 404 for an unknown application", async () => {
+    expect((await call("/api/applications/999/receipt")).status).toBe(404);
   });
 });

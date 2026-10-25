@@ -6,7 +6,7 @@ import { setupAccess } from "./access";
 import { createAsset, sendAsset } from "./asset";
 import { createVault, vaultDeposit, vaultWithdraw, vaultInfo, vaultPhase, getDepositorPosition } from "./vault";
 import { createLoanBroker, coverDeposit, coverWithdraw, brokerEntry } from "./broker";
-import { originate, payLoan, manageLoan, deleteLoan, getLoanSnapshot, loanEntry } from "./loan";
+import { decisionMemo, originate, payLoan, manageLoan, deleteLoan, getLoanSnapshot, loanEntry } from "./loan";
 import { getAccountFacts } from "./account";
 import { DEMO_PROFILES } from "./demo-profiles";
 import { LedgerNotReadyError } from "./errors";
@@ -58,7 +58,11 @@ export class XrplLedger implements LedgerService {
       s = saveState(await createVault(c, w.broker, s.mptId!, s.domainId!,
         envInt("VAULT_SUBSCRIPTION_SEC", 300), envInt("VAULT_TERM_SEC", 7200)));
     }
-    if (!s.loanBrokerId) s = saveState({ loanBrokerId: await createLoanBroker(c, w.broker, s.vaultId!) });
+    if (!s.loanBrokerId) {
+      // Default: the most debt the cover can support at the 10% minimum, so the ledger and underwriting agree.
+      const debtMax = String(envInt("BROKER_DEBT_MAX", envInt("BROKER_COVER", 5000) * 10));
+      s = saveState({ loanBrokerId: await createLoanBroker(c, w.broker, s.vaultId!, debtMax) });
+    }
 
     const now = await ledgerCloseTime(c);
     const v = await vaultInfo(c, s.vaultId!);
@@ -204,6 +208,8 @@ export class XrplLedger implements LedgerService {
   }
 
   getScoreRecord(cid: string) { return this.passports.get(cid); }
+
+  async getDecisionMemo(txHash: string) { return decisionMemo(await this.c(), txHash); }
 
   async revokeScoreToken(address: string) {
     const c = await this.c();

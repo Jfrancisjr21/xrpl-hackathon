@@ -232,6 +232,20 @@ export const ApplicationView = z.object({
 });
 export type ApplicationView = z.infer<typeof ApplicationView>;
 
+// GET /api/applications/:id/receipt (Feature 1). matches: the stored decision still hashes to decisionHash.
+// memoMatches: the LoanSet's decision-sha256 memo on the ledger equals that hash (null before origination).
+export const DecisionReceipt = z.object({
+  applicationId: z.number().int().positive(),
+  decisionHash: z.string().regex(/^[0-9a-f]{64}$/).nullable(),
+  recomputedHash: z.string().regex(/^[0-9a-f]{64}$/),
+  matches: z.boolean(),
+  ledgerMemo: z.string().nullable(),
+  memoMatches: z.boolean().nullable(),
+  loanId: LedgerId.optional(),
+  tx: TxResult.optional(), // the LoanSet
+});
+export type DecisionReceipt = z.infer<typeof DecisionReceipt>;
+
 // GET /api/applications?status=&borrower=
 export const ApplicationQuery = z.object({
   status: ApplicationStatus.optional(),
@@ -345,7 +359,7 @@ export type AuditActor = z.infer<typeof AuditActor>;
 
 export const AuditAction = z.enum([
   "application_decided", "application_approved", "application_rejected",
-  "loan_originated", "loan_failed", "loan_paid", "loan_impaired", "loan_unimpaired", "loan_defaulted", "loan_deleted",
+  "loan_originated", "loan_failed", "loan_paid", "payment_overdue", "loan_impaired", "loan_unimpaired", "loan_defaulted", "loan_deleted",
   "vault_deposit", "vault_withdraw", "cover_deposit", "cover_withdraw",
   "agent_paused", "agent_resumed", "policy_updated", "demo_reset",
 ]);

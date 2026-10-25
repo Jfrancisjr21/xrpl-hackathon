@@ -90,7 +90,7 @@ describe("revenue (R10)", () => {
     const r = RevenueView.parse((await call("/api/broker/revenue")).body);
     expect(r).toEqual({
       interestCollected: "1.00", platformFees: "0.10", depositorShare: "0.90", paymentsCount: 1,
-      managementFeeRate: 10000, serviceFees: "10.00", originationFees: "100.00",
+      managementFeeRate: 10000, serviceFees: "10.00", originationFees: "5.00", // 1% of 500
     });
   });
 });

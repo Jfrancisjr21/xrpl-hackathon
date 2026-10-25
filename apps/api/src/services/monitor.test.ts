@@ -1,7 +1,7 @@
 import type { LedgerService, LoanSnapshot } from "@hack/ledger";
 import { Alert, type Decision } from "@hack/shared";
 import { beforeEach, describe, expect, it } from "vitest";
-import { createApplication, isBanned, loansPaidOff, openDb, transition, type Db } from "../db/db";
+import { createApplication, isBanned, listAudit, loansPaidOff, openDb, transition, type Db } from "../db/db";
 import { createMonitor } from "./monitor";
 
 const ALICE = "rByhcLgLG7rzJ2ceqzJgM4bFjuQodSrYFb";
@@ -101,5 +101,19 @@ describe("overdue monitor", () => {
     await new Promise((r) => setTimeout(r, 0));
     release();
     await first;
+  });
+  it("writes one payment_overdue audit row per loan, not one per tick", async () => {
+    const m = createMonitor({ db, ledger });
+    await m.tick(after);
+    await m.tick(later);
+    expect(listAudit(db).filter((e) => e.action === "payment_overdue").map((e) => e.loanId)).toEqual([LOAN_A]);
+  });
+
+  it("keeps an alert through a failed ledger read", async () => {
+    const m = createMonitor({ db, ledger });
+    await m.tick(after);
+    loans[LOAN_A] = undefined; // the read fails this tick
+    await m.tick(later);
+    expect(m.alerts().map((a) => a.loanId)).toEqual([LOAN_A]);
   });
 });

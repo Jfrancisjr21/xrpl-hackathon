@@ -5,8 +5,11 @@ import {
 import { serial, submit, checkResult, findCreated, ledgerCloseTime, ledgerEntry } from "./client";
 import type { LoanSnapshot, LoanStatus, LoanTerms, PayMode } from "./types";
 
-export const ORIGINATION_FEE = "100"; // taken from the principal, paid to the broker
-export const SERVICE_FEE = "10";     // added to every payment
+export const ORIGINATION_FEE_RATE = 0.01; // 1% of the principal, taken from it and paid to the broker
+export const SERVICE_FEE = "10";          // added to every payment
+
+// MPT amounts are whole numbers, so the fee rounds up: 500 -> 5, 1 -> 1.
+export const originationFee = (principal: string) => String(Math.ceil(Number(principal) * ORIGINATION_FEE_RATE));
 
 export function buildLoanSet(brokerAddr: string, loanBrokerId: string, t: LoanTerms) {
   return {
@@ -19,7 +22,7 @@ export function buildLoanSet(brokerAddr: string, loanBrokerId: string, t: LoanTe
     PaymentTotal: t.paymentTotal,
     PaymentInterval: t.paymentIntervalSec,
     ...(t.gracePeriodSec > 0 ? { GracePeriod: t.gracePeriodSec } : {}),
-    LoanOriginationFee: ORIGINATION_FEE,
+    LoanOriginationFee: originationFee(t.principal),
     LoanServiceFee: SERVICE_FEE,
     // Feature 1: the decision hash travels with the loan, readable on the explorer.
     ...(t.decisionMemo
@@ -39,6 +42,15 @@ export function originate(c: Client, broker: Wallet, borrower: Wallet, loanBroke
 }
 
 export const loanEntry = (c: Client, loanId: string) => ledgerEntry(c, loanId);
+
+// Feature 1: the decision hash written into a LoanSet's memo, lowercase hex, or null if it has none.
+export async function decisionMemo(c: Client, txHash: string): Promise<string | null> {
+  const res: any = await c.request({ command: "tx", transaction: txHash } as any);
+  const memos: any[] = res.result.tx_json?.Memos ?? res.result.Memos ?? [];
+  const type = convertStringToHex("decision-sha256");
+  const memo = memos.find((m) => m.Memo?.MemoType?.toUpperCase() === type);
+  return memo ? String(memo.Memo.MemoData).toLowerCase() : null;
+}
 
 // MPT amounts are whole numbers, so round amounts owed up.
 const up = (v: unknown) => Math.ceil(Number(v ?? 0));

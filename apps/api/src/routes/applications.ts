@@ -1,10 +1,10 @@
 import { createHash } from "node:crypto";
 import { Router } from "express";
 import { LedgerNotReadyError } from "@hack/ledger";
-import { ApplicationIdParam, ApplicationQuery, BrokerNote, LoanApplicationInput, type Decision } from "@hack/shared";
+import { ApplicationIdParam, ApplicationQuery, BrokerNote, LoanApplicationInput, type Decision, type DecisionReceipt, type TxResult } from "@hack/shared";
 import type { Deps } from "../app";
 import { audit, createApplication, getApplication, hasOpenApplication, isBanned, listApplications, loansPaidOff, toView, transition } from "../db/db";
-import { HttpError, LedgerError, requireBrokerKey, validate } from "../middleware";
+import { HttpError, LedgerError, onLedger, requireBrokerKey, validate } from "../middleware";
 import { agentView } from "./agent";
 
 // Payment interval and grace period. DEMO_FAST_LOANS makes payments due every 60 s so impair and default can be shown live.
@@ -51,6 +51,27 @@ export function applicationsRouter({ db, ledger, underwrite }: Deps) {
   router.get("/", validate({ query: ApplicationQuery }), (req, res) => {
     const { status, borrower } = req.query as ApplicationQuery;
     res.json(listApplications(db, { status, borrower }).map(toView));
+  });
+
+  // Feature 1: anyone can check that the stored decision still hashes to the receipt, and that the loan's memo carries it.
+  router.get("/:id/receipt", validate({ params: ApplicationIdParam }), async (req, res) => {
+    const id = req.params.id as unknown as number;
+    const row = getApplication(db, id);
+    if (!row) throw new HttpError(404, `Application ${id} not found`);
+    const recomputed = createHash("sha256").update(row.decision_json).digest("hex");
+    const tx = row.tx_json ? (JSON.parse(row.tx_json) as TxResult) : null;
+    const memo = tx ? await onLedger(() => ledger.getDecisionMemo(tx.hash)) : null;
+    const body: DecisionReceipt = {
+      applicationId: id,
+      decisionHash: row.decision_hash,
+      recomputedHash: recomputed,
+      matches: row.decision_hash === recomputed,
+      ledgerMemo: memo,
+      memoMatches: tx ? memo === recomputed : null,
+      ...(row.loan_id ? { loanId: row.loan_id } : {}),
+      ...(tx ? { tx } : {}),
+    };
+    res.json(body);
   });
 
   router.get("/:id", validate({ params: ApplicationIdParam }), (req, res) => {

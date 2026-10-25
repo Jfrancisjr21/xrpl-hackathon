@@ -1,9 +1,8 @@
 import { Router } from "express";
 import { CoverMove, platformFeeOn, type BrokerView, type RevenueView } from "@hack/shared";
-// shortcut: the fee constants are not exported from @hack/ledger's index yet; ask Juan to export them.
-import { ORIGINATION_FEE } from "@hack/ledger/src/loan";
+import { originationFee } from "@hack/ledger";
 import type { Deps } from "../app";
-import { audit, listAudit, originatedLoanCount, paymentTotals } from "../db/db";
+import { audit, listApplications, listAudit, paymentTotals } from "../db/db";
 import { onLedger, requireBrokerKey, validate } from "../middleware";
 
 export function brokerRouter({ db, ledger }: Deps) {
@@ -45,7 +44,9 @@ export function brokerRouter({ db, ledger }: Deps) {
       paymentsCount: totals.count,
       managementFeeRate,
       serviceFees: totals.serviceFees.toFixed(2),
-      originationFees: (originatedLoanCount(db) * Number(ORIGINATION_FEE)).toFixed(2),
+      // 1% of each originated loan's principal (secured offers are never originated, so they pay none).
+      originationFees: listApplications(db).filter((a) => a.loan_id)
+        .reduce((sum, a) => sum + Number(originationFee(a.amount)), 0).toFixed(2),
     };
     res.json(body);
   });

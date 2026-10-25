@@ -103,6 +103,7 @@ export interface LedgerService {
   getAccountFacts(address: string): Promise<FactsResult>;
   issueScoreToken(address: string, fields: ScoreTokenFields): Promise<{ nftId: string; cid: string; tx: TxResult; moveTx: TxResult | null }>;
   getScoreToken(address: string): Promise<ScoreToken | null>;
-  getScoreRecord(cid: string): Promise<Buffer | null>; // the raw record file, for GET /api/passports/:cid
+  getScoreRecord(cid: string): Promise<Buffer | null>;
+  getDecisionMemo(txHash: string): Promise<string | null>; // Feature 1: the decision hash in a LoanSet's memo // the raw record file, for GET /api/passports/:cid
   revokeScoreToken(address: string): Promise<TxResult | null>;
 }

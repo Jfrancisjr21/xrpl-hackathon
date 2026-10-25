@@ -1,5 +1,5 @@
 import type {
-  AgentDelegation, AgentPolicy, AgentView, ApplicationStatus, ApplicationView, AuditEvent, BrokerView,
+  AgentDelegation, AgentPolicy, AgentView, ApplicationStatus, ApplicationView, AuditEvent, BrokerView, DecisionReceipt,
   DemoWallet, HealthResponse, LoanApplicationInput, LoanView, PayMode, PayResult, RevenueView, TxResult, VaultView,
 } from "@hack/shared";
 import { samples, type VerifyResult } from "../samples";
@@ -47,6 +47,7 @@ export const api = {
     MOCK ? samples.withdraw(address, amount) : post<TxResult>("/vault/withdraw", { address, amount }),
   apply: (body: LoanApplicationInput) => (MOCK ? samples.apply(body) : post<ApplicationView>("/applications", body)),
   application: (id: number) => (MOCK ? samples.application(id) : http<ApplicationView>(`/applications/${q(id)}`)),
+  receipt: (id: number) => http<DecisionReceipt>(`/applications/${q(id)}/receipt`), // Feature 1: hash and ledger memo check
   myApplications: (borrower: string) =>
     read<ApplicationView[]>(`/applications?borrower=${q(borrower)}`, () => samples.applicationsFor(borrower)),
   loans: (borrower?: string) =>

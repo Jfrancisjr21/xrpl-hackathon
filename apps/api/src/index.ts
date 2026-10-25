@@ -3,6 +3,7 @@ import { XrplLedger } from "@hack/ledger";
 import { createApp } from "./app";
 import { openDb } from "./db/db";
 import { demoBureau } from "./services/credit";
+import { createMonitor } from "./services/monitor";
 import { riskUnderwrite } from "./services/underwriting";
 
 const ledger = new XrplLedger();
@@ -16,7 +17,10 @@ try {
   process.exit(1);
 }
 
+const db = openDb();
+const monitor = createMonitor({ db, ledger });
+monitor.start(10_000); // checks every loan for overdue payments every 10 s
 const underwrite = riskUnderwrite(ledger, demoBureau(ledger.getWallets()));
-const app = createApp({ db: openDb(), ledger, underwrite });
+const app = createApp({ db, ledger, underwrite, alerts: monitor.alerts });
 const port = Number(process.env.PORT ?? 3001);
 app.listen(port, () => console.log(`api listening on :${port}`));

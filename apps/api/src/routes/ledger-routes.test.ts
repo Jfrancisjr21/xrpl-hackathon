@@ -20,7 +20,7 @@ const vault = {
 };
 const snapshot = (over: Partial<LoanSnapshot> = {}): LoanSnapshot => ({
   loanId: LOAN, borrower: ALICE, principal: "500", interestRate: 10000, paymentsRemaining: 3,
-  nextDueIso: "2026-10-24T22:31:26.000Z", totalOwed: "510", status: "active",
+  nextDueIso: "2099-01-01T00:00:00.000Z", totalOwed: "510", status: "active",
   installmentDue: "180", payoffAmount: "520", canImpair: false, canDefault: false, ...over,
 });
 
@@ -128,6 +128,15 @@ describe("paying", () => {
     const again = await call("/api/applications", { method: "POST", body: { borrowerAddress: ALICE, amount: "100", paymentTotal: 1 } });
     expect(again.status).toBe(201);
     expect((await call(`/api/loans/${LOAN}/pay-due`, { method: "POST" })).status).toBe(409); // already paid
+  });
+
+  it("refuses a payoff while a payment is overdue, before touching the ledger", async () => {
+    originated();
+    loan = snapshot({ nextDueIso: "2020-01-01T00:00:00.000Z" });
+    const r = await call(`/api/loans/${LOAN}/pay`, { method: "POST", body: { mode: "payoff" } });
+    expect(r.status).toBe(409);
+    expect(r.body.error).toMatch(/Pay the amount due first/);
+    expect(calls).toEqual([]);
   });
 
   it("answers 404 for a loan we did not originate, and 400 for a malformed id", async () => {

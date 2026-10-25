@@ -13,6 +13,7 @@ import {
   snapshotFromContract,
 } from "./contractAdapters";
 import { demoAgent, demoApplications, demoAudit, demoLoans, demoSnapshot } from "./demoData";
+import { VerifyPanel } from "./VerifyPanel";
 import {
   agentPolicyError,
   applicationDecisionError,
@@ -409,6 +410,9 @@ function Overview({
         </Panel>
         <RevenuePanel snapshot={snapshot} />
       </div>
+      <Panel title="Verify a wallet" action={<span className="panel-note">What another lender sees</span>}>
+        <VerifyPanel />
+      </Panel>
     </>
   );
 }

@@ -350,3 +350,8 @@ th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; }
 }
+
+/* Feature 5 demo: verify a wallet's score passport */
+.verify-panel form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.verify-panel form input { flex: 1 1 260px; min-width: 0; }
+.verify-panel .text-button { margin-right: 8px; }

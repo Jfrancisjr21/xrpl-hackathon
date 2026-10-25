@@ -1,8 +1,9 @@
 import type { ApplicationStatus, ApplicationView, Decision } from "@hack/shared";
 
-/** Blocked when the sanctions gate stopped it before scoring, otherwise the agent's yes or no. */
-export function verdictOf(d: Decision): "Approved" | "Denied" | "Blocked" {
+/** Blocked when the sanctions gate stopped it before scoring; a secured credit-builder offer; otherwise the agent's yes or no. */
+export function verdictOf(d: Decision): "Approved" | "Denied" | "Blocked" | "Secured offer" {
   if (d.sanctions.blocked) return "Blocked";
+  if (d.outcome === "secured_offer") return "Secured offer";
   return d.approved ? "Approved" : "Denied";
 }
 
@@ -26,7 +27,10 @@ export function timelineOf(app: ApplicationView): { states: StepState[]; note: s
   const [step, state] = at[app.status];
   const states = STEPS.map((_, i): StepState => (i < step ? "done" : i === step ? state : "todo"));
   const note =
-    app.status === "denied" ? (app.decision.sanctions.blocked ? "Blocked by the sanctions check." : "Denied by the agent.")
+    app.status === "denied"
+      ? app.decision.sanctions.blocked ? "Blocked by the sanctions check."
+      : app.decision.outcome === "secured_offer" ? "Offered a secured credit-builder loan instead of an unsecured one."
+      : "Denied by the agent."
     : app.status === "rejected" ? `Declined by the broker${app.brokerNote ? `: ${app.brokerNote}` : "."}`
     : app.status === "failed" ? `The loan could not be created${app.error ? `: ${app.error}` : "."}`
     : null;

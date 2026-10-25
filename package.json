@@ -9,6 +9,7 @@
     "dev:web": "pnpm --filter @hack/web dev",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r --if-present test",
+    "smoke": "bash scripts/smoke.sh",
     "ledger:fund-wallets": "pnpm --filter @hack/ledger fund-wallets",
     "ledger:check-wallets": "pnpm --filter @hack/ledger check-wallets",
     "ledger:bootstrap": "pnpm --filter @hack/ledger bootstrap",

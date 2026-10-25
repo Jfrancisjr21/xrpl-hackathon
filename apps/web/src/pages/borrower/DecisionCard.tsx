@@ -12,7 +12,7 @@ const PARTS = [
   { key: "trustlines", label: "Trust lines", max: 20 },
   { key: "credential", label: "Verified credential", max: 20 },
 ] as const;
-const badgeValue = { Approved: "approved", Denied: "rejected", Blocked: "flagged" } as const;
+const badgeValue = { Approved: "approved", Denied: "rejected", Blocked: "flagged", "Secured offer": "review" } as const;
 
 /** What the agent decided and why: verdict, score, sanctions, rate, the loan's cost and the decision receipt. */
 export function DecisionCard({ app, assetLabel }: { app: ApplicationView; assetLabel: string }) {
@@ -40,14 +40,20 @@ export function DecisionCard({ app, assetLabel }: { app: ApplicationView; assetL
             <span style={{ width: `${d.score.total}%` }} />
             <i style={{ left: `${d.minScore}%` }} />
           </div>
+          {d.score.internal !== undefined && (
+            <dl className="score-parts">
+              <div><dt>Credit report (60%)</dt><dd className="num">{d.score.credit ?? "no file"}{d.score.credit != null && " / 100"}</dd></div>
+              <div><dt>Internal (40%): wallet + loans repaid with us</dt><dd className="num">{d.score.internal} / 100</dd></div>
+            </dl>
+          )}
           <dl className="score-parts">
             {PARTS.map((p) => (
               <div key={p.key}><dt>{p.label}</dt><dd className="num">{d.score![p.key]} / {p.max}</dd></div>
             ))}
           </dl>
         </div>
-      ) : (
-        <p className="hint">Not scored: the sanctions check stopped this application first.</p>
+      ) : d.approved ? null : (
+        <p className="hint">Not scored: {d.sanctions.blocked ? "the sanctions check" : d.banned ? "the ban list" : "a check before scoring"} stopped this application first.</p>
       )}
 
       <p className={d.sanctions.blocked ? "sanctions sanctions--blocked" : "sanctions"}>
@@ -56,6 +62,22 @@ export function DecisionCard({ app, assetLabel }: { app: ApplicationView; assetL
           : <>Sanctions: <b>Cleared</b> against the sanctions lists.</>}
       </p>
 
+      {d.credit && (
+        <p className="hint">
+          Credit check ({d.credit.provider === "demo" ? "simulated bureau" : "iSoftpull, demo mode"}, soft pull):{" "}
+          {d.credit.fileFound
+            ? <>middle score <b className="num">{d.credit.middleScore}</b> ({d.credit.scores.map((s) => `${s.bureau} ${s.score}`).join(", ")})</>
+            : <>no credit file found</>}
+        </p>
+      )}
+      {d.approvalLevel && d.outcome === "approved" && (
+        <p className="offer">Level <b>{d.approvalLevel}</b>: up to <b className="num">{amount(d.maxAmount)} {assetLabel}</b> over at most {d.maxPaymentTotal} payments</p>
+      )}
+      {d.outcome === "secured_offer" && (
+        <p className="offer">
+          Secured credit-builder loan: up to <b className="num">{amount(d.maxAmount)} {assetLabel}</b>, backed by <b className="num">{amount(d.collateralRequired)} {assetLabel}</b> of your own funds. Repaying it builds your history with us.
+        </p>
+      )}
       {d.interestRate !== null && <p className="offer">Offered rate <b className="num">{pct(d.interestRate)}</b> a year</p>}
       <p className="explanation">{d.explanation}</p>
       {d.featureSource === "demo-profile" && <p className="hint">Seeded demo profile: these facts belong to a demo persona, not this wallet's ledger history.</p>}

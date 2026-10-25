@@ -7,6 +7,7 @@ import { ApplyForm } from "./ApplyForm";
 import { DecisionCard } from "./DecisionCard";
 import { StatusTimeline } from "./StatusTimeline";
 import { MyLoan } from "./MyLoan";
+import { ScorePassport } from "./ScorePassport";
 import { ENDED, WAITING, latestOf } from "./status";
 import { isOpen, pickLoan } from "./loan";
 
@@ -40,6 +41,7 @@ export function BorrowerScreen() {
             <MyLoan key={loan.loanId} loan={loan} assetLabel={assetLabel} onPaid={refreshAll}
               paymentTotal={apps.data?.find((a) => a.id === loan.applicationId)?.paymentTotal ?? null} />
           )}
+          {loan && <ScorePassport address={borrower.address} />}
           {canApply && (
             <ApplyForm key={`apply-${borrower.address}`} address={borrower.address} assetLabel={assetLabel} loansOpenAt={loansOpenAt} onApplied={refreshAll} />
           )}

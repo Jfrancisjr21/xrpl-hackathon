@@ -331,6 +331,9 @@ function RevenuePanel({ snapshot }: { snapshot: BrokerSnapshot }) {
         <div><dt>Fee rate</dt><dd className="num">{formatPercent(snapshot.feeRate, 0)}</dd></div>
         <div><dt>Interest collected</dt><dd className="num">{formatMoney(snapshot.interestCollected)}</dd></div>
         <div><dt>Platform fee earned</dt><dd className="num">{formatMoney(snapshot.platformFee)}</dd></div>
+        <div><dt>Service fees</dt><dd className="num">{formatMoney(snapshot.serviceFees)}</dd></div>
+        <div><dt>Origination fees</dt><dd className="num">{formatMoney(snapshot.originationFees)}</dd></div>
+        <div><dt>Broker total</dt><dd className="num">{formatMoney(snapshot.platformFee + snapshot.serviceFees + snapshot.originationFees)}</dd></div>
         <div><dt>Lender share</dt><dd className="num">{formatMoney(snapshot.interestCollected - snapshot.platformFee)}</dd></div>
         <div><dt>Projected active-loan fee</dt><dd className="num">{snapshot.projectedFee === null ? "—" : formatMoney(snapshot.projectedFee)}</dd></div>
       </dl>
@@ -757,6 +760,32 @@ function LoansView({ loans, applications, alerts, live, selected, error, pending
   );
 }
 
+// Clears applications, loans and the audit log between demo runs. The API only allows it with DEMO_MODE=true.
+function DemoReset() {
+  const [state, setState] = useState<"idle" | "busy" | "error">("idle");
+  const [error, setError] = useState<string | null>(null);
+  async function reset() {
+    if (!window.confirm("Reset the demo? This deletes every application, loan record and audit event. Ledger state is not touched.")) return;
+    setState("busy");
+    try {
+      await api.resetDemo();
+      window.location.reload();
+    } catch (e) {
+      setState("error");
+      setError(e instanceof ApiError ? e.message : "Reset failed.");
+    }
+  }
+  return (
+    <section className="settings-row">
+      <div className="settings-copy"><h2>Demo reset</h2><p>Start a fresh run. Needs DEMO_MODE=true on the API.</p></div>
+      <div className="settings-panel">
+        <button className="button button--danger" type="button" disabled={state === "busy"} onClick={() => void reset()}>{state === "busy" ? "Resetting…" : "Reset demo data"}</button>
+        {error ? <div className="inline-error" role="alert">{error}</div> : null}
+      </div>
+    </section>
+  );
+}
+
 function AgentView({
   agent,
   audit,
@@ -830,6 +859,7 @@ function AgentView({
           {delegationNotice ? <div className="feature-notice" role="status">{delegationNotice}</div> : null}
         </div>
       </section>
+      {live ? <DemoReset /> : null}
       <Panel title="Audit log" action={<button className="button button--secondary button--small" type="button" onClick={downloadAuditCsv} disabled={!audit.length}>Download CSV</button>}>
         {audit.length ? <div className="table-wrap"><table aria-label="Broker audit log"><thead><tr><th>Time</th><th>Actor</th><th>Title</th><th>Detail</th><th>Application or loan</th><th>Receipt</th></tr></thead><tbody>{audit.map((entry) => <tr key={entry.id}><td><time dateTime={entry.at}>{formatDate(entry.at)}</time></td><td>{entry.actor}</td><td>{entry.action}</td><td className="audit-detail">{entry.reason}</td><td className="mono">{entry.subject}</td><td>{entry.txHash ? <a href={explorerUrl(entry.txHash)} target="_blank" rel="noreferrer">Explorer</a> : "—"}</td></tr>)}</tbody></table></div> : <div className="empty-state">No broker or agent events have been recorded.</div>}
       </Panel>

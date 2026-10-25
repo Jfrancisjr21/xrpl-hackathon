@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
-import type { DemoWallet } from "@hack/shared";
+import type { DemoWallet, VerifyResult } from "@hack/shared";
 import { StatusBadge } from "../../components/StatusBadge";
-import { ApiError, api } from "../../lib/api";
-import { samples, type VerifyResult } from "../../samples";
+import { api } from "../../lib/api";
+import { samples } from "../../samples";
 import { formatDate } from "./model";
 
 /** The internal score's unit, shown next to every score (for example "88 LCS"). */
@@ -14,15 +14,15 @@ const check = (ok: boolean, label: string) => <StatusBadge value={ok ? "clear" :
 export function sampleVerification(address: string, wallets: DemoWallet[]): VerifyResult {
   const role = wallets.find((wallet) => wallet.address === address)?.role;
   const sampleAddress = samples.wallets.find((wallet) => wallet.role === role)?.address ?? address;
-  return { ...samples.verify(sampleAddress), address };
+  const result = samples.verify(sampleAddress);
+  return result.token ? { ...result, address, token: { ...result.token, holder: address } } : { ...result, address };
 }
 
-/** Feature 5 demo: what another lender sees when they check a wallet's score passport. */
-export function VerifyPanel() {
+/** What another lender sees when they check a wallet's score passport. */
+export function VerifyPanel({ preview = false }: { preview?: boolean }) {
   const [wallets, setWallets] = useState<DemoWallet[]>(samples.wallets);
   const [address, setAddress] = useState("");
   const [result, setResult] = useState<VerifyResult | null>(null);
-  const [sample, setSample] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,18 +34,11 @@ export function VerifyPanel() {
     setPending(true);
     setError(null);
     setResult(null);
-    setSample(false);
     try {
-      setResult(await api.verify(target));
+      setResult(preview ? sampleVerification(target, wallets) : await api.verify(target));
     } catch (e) {
-      // shortcut: until GET /api/verify merges (404) or with no API running (0), show the sample answer. Remove once the route exists.
-      if (e instanceof ApiError && (e.status === 404 || e.status === 0)) {
-        setResult(sampleVerification(target, wallets));
-        setSample(true);
-      } else {
-        setResult(null);
-        setError(e instanceof Error ? e.message : String(e));
-      }
+      setResult(null);
+      setError(e instanceof Error ? e.message : String(e));
     } finally {
       setPending(false);
     }
@@ -67,16 +60,17 @@ export function VerifyPanel() {
         ))}
       </p>
       {error ? <div className="alert-error" role="alert">{error}</div> : null}
-      {result?.verified ? (
+      {result?.verified && result.token ? (
         <div role="status">
           <p><StatusBadge value="clear" label="Verified" /> <strong className="num">{result.token.score} {SCORE_UNIT}</strong> · Level {result.token.level} · issued {formatDate(result.token.issuedAt)}</p>
           <p>{check(result.token.kyc, "KYC")} {check(result.token.credit, "Credit")} {check(result.token.lending, "Lending")}</p>
+          <p className="panel-note">Valid until {formatDate(result.token.expiresAt)} · held by <span className="mono">{result.token.holder}</span></p>
           {result.token.txUrl ? <a href={result.token.txUrl} target="_blank" rel="noreferrer">Open the passport on XRPL Explorer</a> : null}
         </div>
       ) : result ? (
-        <p role="status"><StatusBadge value="denied" label="Not verified" /> No score passport from us for this wallet.</p>
+        <p role="status"><StatusBadge value="denied" label="Not verified" /> {result.reason === "expired" ? `This score passport expired${result.token ? ` on ${formatDate(result.token.expiresAt)}` : ""}.` : "No score passport from us for this wallet."}</p>
       ) : null}
-      {sample ? <p className="panel-note">Sample answer: the verify route is not merged yet.</p> : null}
+      {preview && result ? <p className="panel-note">Preview data. No ledger request was made.</p> : null}
     </div>
   );
 }

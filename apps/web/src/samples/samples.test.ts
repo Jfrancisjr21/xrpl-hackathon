@@ -72,8 +72,7 @@ describe("mock verify (Feature 5)", () => {
   it("verifies only Alice's score passport", () => {
     const mallory = samples.wallets.find((w) => w.role === "borrower")!.address;
     const a = samples.verify(alice);
-    expect(a.verified && a.token.score).toBe(88);
-    expect(a.verified && a.token.level).toBe("A");
+    expect(a).toMatchObject({ verified: true, token: { score: 88, level: "A" } });
     expect(samples.verify(mallory)).toEqual({ address: mallory, verified: false, reason: "no_token" });
   });
 });

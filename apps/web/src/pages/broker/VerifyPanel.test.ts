@@ -12,6 +12,7 @@ describe("sampleVerification", () => {
     expect(sampleVerification(liveWallets[0].address, liveWallets)).toMatchObject({
       address: liveWallets[0].address,
       verified: true,
+      token: { holder: liveWallets[0].address },
     });
   });
 

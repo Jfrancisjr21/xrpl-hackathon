@@ -37,7 +37,7 @@ function UserApp() {
               </button>
             ))}
           </nav>
-          <WalletSwitcher />
+          {tab === "borrower" && <WalletSwitcher />}
           <span className="shell-net" role="status">
             {h ? `XRPL ${h.network ?? "Devnet"} · vault ${h.vaultPhase ?? "starting"}${h.mockMode ? " · mock ledger" : ""}`
               : health.loading ? "Connecting…" : "API offline"}

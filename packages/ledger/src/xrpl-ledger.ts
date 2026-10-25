@@ -3,7 +3,7 @@ import { connect, disconnect, explorerUrl, ledgerCloseTime } from "./client";
 import { loadWallets } from "./wallets";
 import { readState, saveState, type LedgerState } from "./state";
 import { setupAccess } from "./access";
-import { createAsset } from "./asset";
+import { createAsset, sendAsset } from "./asset";
 import { createVault, vaultDeposit, vaultWithdraw, vaultInfo, vaultPhase, getDepositorPosition } from "./vault";
 import { createLoanBroker, coverDeposit, coverWithdraw, brokerEntry } from "./broker";
 import { originate, payLoan, manageLoan, deleteLoan, getLoanSnapshot, loanEntry } from "./loan";
@@ -61,10 +61,16 @@ export class XrplLedger implements LedgerService {
     const now = await ledgerCloseTime(c);
     const v = await vaultInfo(c, s.vaultId!);
     if (Number(v.AssetsTotal ?? 0) === 0 && vaultPhase(now, s.subscriptionDate, s.redemptionDate) === "subscription") {
-      await vaultDeposit(c, w.depositor, s.vaultId!, s.mptId!, "10000");
+      await vaultDeposit(c, w.depositor, s.vaultId!, s.mptId!, String(envInt("VAULT_SEED_DEPOSIT", 100000)));
     }
+    // Underwriting caps one loan at 20% of available funds, and the ledger caps debt at 10x cover,
+    // so the seed deposit and the cover set the largest loan the demo can approve.
     const b = await brokerEntry(c, s.loanBrokerId!);
-    if (Number(b.CoverAvailable ?? 0) === 0) await coverDeposit(c, w.broker, s.loanBrokerId!, s.mptId!, "1000");
+    if (Number(b.CoverAvailable ?? 0) === 0) {
+      const cover = String(envInt("BROKER_COVER", 5000));
+      await sendAsset(c, w.depositor, w.broker.address, s.mptId!, cover); // earlier vaults' cover stays locked, so top up first
+      await coverDeposit(c, w.broker, s.loanBrokerId!, s.mptId!, cover);
+    }
     return { vaultId: s.vaultId!, loanBrokerId: s.loanBrokerId!, assetId: s.mptId! };
   }
 

@@ -33,6 +33,7 @@ pnpm dev
 
 - App: <http://localhost:5173>
 - API check: <http://localhost:3001/api/health>
+- Every API route: [docs/api.md](docs/api.md)
 
 Never commit `apps/api/.env` or `apps/api/wallets.json`. They hold secrets and are already git-ignored.
 

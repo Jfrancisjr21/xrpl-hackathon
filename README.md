@@ -38,12 +38,14 @@ Never commit `apps/api/.env` or `apps/api/wallets.json`. They hold secrets and a
 
 ## Demo borrowers
 
+Each applies for 500 over 3 payments, with the credit check authorized.
+
 | Borrower | Result |
 | --- | --- |
-| Alice | Approved at 7.4% |
-| Carol | Approved at 12.8% |
-| Bob | Denied (score too low) |
-| Mallory | Blocked (on the sanctions list) |
+| Alice | Approved: score 87, level A, 7.6% |
+| Carol | Approved: score 57, level C, 13.6% (level C allows at most 3 payments) |
+| Bob | No credit file: offered a secured credit-builder loan at 5% instead of an unsecured one |
+| Mallory | Blocked (on the sanctions list) before any credit check |
 
 ## Limits
 

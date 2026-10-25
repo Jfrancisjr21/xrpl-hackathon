@@ -362,6 +362,7 @@ export const AuditAction = z.enum([
   "loan_originated", "loan_failed", "loan_paid", "payment_overdue", "loan_impaired", "loan_unimpaired", "loan_defaulted", "loan_deleted",
   "vault_deposit", "vault_withdraw", "cover_deposit", "cover_withdraw",
   "agent_paused", "agent_resumed", "policy_updated", "demo_reset",
+  "score_token_issued", "score_token_failed", "score_token_revoked",
 ]);
 export type AuditAction = z.infer<typeof AuditAction>;
 
@@ -407,3 +408,72 @@ export const Alert = z.object({
   detectedAt: IsoDate,
 });
 export type Alert = z.infer<typeof Alert>;
+
+// ---------- Feature 5: score passport ----------
+
+// pending -> minted (still on the issuer) | held (in the borrower's wallet) | failed. revoked once burned.
+export const ScoreTokenStatus = z.enum(["pending", "minted", "held", "failed", "revoked"]);
+export type ScoreTokenStatus = z.infer<typeof ScoreTokenStatus>;
+
+// What the passport says, read back from the ledger and its IPFS-addressed record. No bureau data, no personal data.
+export const PassportOnLedger = z.object({
+  nftId: LedgerId,
+  cid: z.string(), // the NFT's URI is ipfs://<cid>; GET /api/passports/:cid serves the record
+  issuer: Address,
+  holder: Address, // the borrower once moved, else still the issuer
+  lcs: z.number().int().min(0).max(100), // Ledger Credit Score: 60% credit + 40% internal
+  onChainScore: z.number().int().min(0).max(100), // the four wallet signals
+  level: z.enum(["A", "B", "C"]),
+  kyc: z.boolean(),
+  credit: z.boolean(),
+  lending: z.boolean(),
+  decisionHash: z.string().regex(/^[0-9a-f]{64}$/i),
+  issuedAt: IsoDate,
+  expiresAt: IsoDate,
+  expired: z.boolean(),
+});
+export type PassportOnLedger = z.infer<typeof PassportOnLedger>;
+
+// GET /api/score-tokens/:address and POST /api/score-tokens: our record of issuing it plus the ledger state.
+export const ScoreTokenView = z.object({
+  address: Address,
+  status: ScoreTokenStatus.nullable(), // null: never issued for this wallet
+  applicationId: z.number().int().positive().nullable(),
+  mintTx: TxResult.optional(),
+  moveTx: TxResult.optional(),
+  error: z.string().optional(),
+  onLedger: PassportOnLedger.nullable(),
+});
+export type ScoreTokenView = z.infer<typeof ScoreTokenView>;
+
+// GET /api/verify/:address: public, reads the ledger. "What another lender sees."
+export const VerifyResult = z.object({
+  address: Address,
+  verified: z.boolean(),
+  reason: z.enum(["no_token", "expired"]).optional(),
+  token: z
+    .object({
+      score: z.number().int().min(0).max(100), // the LCS
+      level: z.enum(["A", "B", "C"]),
+      issuedAt: IsoDate,
+      expiresAt: IsoDate,
+      kyc: z.boolean(),
+      credit: z.boolean(),
+      lending: z.boolean(),
+      nftId: LedgerId,
+      cid: z.string(),
+      holder: Address,
+      txUrl: z.url().optional(), // explorer link to the mint, when we issued it from this server
+    })
+    .optional(),
+});
+export type VerifyResult = z.infer<typeof VerifyResult>;
+
+export const IssueScoreToken = z.object({ applicationId: z.number().int().positive(), replace: z.boolean().optional() });
+export type IssueScoreToken = z.infer<typeof IssueScoreToken>;
+
+export const AddressParam = z.object({ address: Address });
+export type AddressParam = z.infer<typeof AddressParam>;
+
+export const CidParam = z.object({ cid: z.string().regex(/^b[a-z2-7]{20,100}$/, "must be a CIDv1 in base32") });
+export type CidParam = z.infer<typeof CidParam>;

@@ -4,6 +4,7 @@ import type { Deps } from "../app";
 import { SERVICE_FEE } from "@hack/ledger";
 import { audit, closeLoan, getApplicationByLoan, listApplications, recordPayment } from "../db/db";
 import { HttpError, onLedger, requireBrokerKey, validate } from "../middleware";
+import { revokePassport } from "../services/passport";
 
 const OPEN_FIRST = { active: 0, impaired: 1, defaulted: 2, paid: 3 } as const;
 
@@ -92,6 +93,7 @@ export function loansRouter({ db, ledger }: Deps) {
     const tx = await onLedger(() => ledger.manageLoan(loanId, "default"));
     closeLoan(db, loanId, "defaulted"); // also puts the borrower on the ban list
     audit(db, { actor: "broker", action: "loan_defaulted", applicationId: row.id, loanId, tx, note: `${row.borrower_address} added to the ban list` });
+    void revokePassport(db, ledger, row.borrower_address, "system", row.id); // a defaulted borrower no longer verifies (Feature 5)
     res.json(tx);
   });
 

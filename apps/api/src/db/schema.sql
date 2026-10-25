@@ -67,6 +67,22 @@ CREATE TABLE IF NOT EXISTS credit_reports (
   pulled_at    TEXT NOT NULL
 );
 
+-- Feature 5: one row per score passport we tried to issue. The ledger is the source of truth; this is our audit trail.
+CREATE TABLE IF NOT EXISTS score_tokens (
+  id             INTEGER PRIMARY KEY AUTOINCREMENT,
+  application_id INTEGER NOT NULL REFERENCES applications (id),
+  wallet         TEXT NOT NULL,
+  status         TEXT NOT NULL CHECK (status IN ('pending','minted','held','failed','revoked')),
+  nft_id         TEXT,
+  cid            TEXT,
+  mint_tx_json   TEXT,
+  move_tx_json   TEXT,
+  error          TEXT,
+  created_at     TEXT NOT NULL,
+  updated_at     TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS score_tokens_by_wallet ON score_tokens (wallet);
+
 -- Small settings the broker changes from the dashboard: agent paused, minimum score.
 CREATE TABLE IF NOT EXISTS config (
   key   TEXT PRIMARY KEY,

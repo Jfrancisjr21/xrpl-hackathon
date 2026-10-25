@@ -1,6 +1,6 @@
 import Database from "better-sqlite3";
 import { readFileSync } from "node:fs";
-import type { ApplicationStatus, ApplicationView, AuditEvent, Decision, PayMode, TxResult } from "@hack/shared";
+import type { ApplicationStatus, ApplicationView, AuditEvent, Decision, PayMode, ScoreTokenStatus, TxResult } from "@hack/shared";
 
 export type Db = Database.Database;
 
@@ -200,6 +200,43 @@ export function listAudit(db: Db, limit = 200): AuditEvent[] {
   }));
 }
 
+// ---------- score passports (Feature 5) ----------
+
+export interface ScoreTokenRow {
+  id: number;
+  application_id: number;
+  wallet: string;
+  status: ScoreTokenStatus;
+  nft_id: string | null;
+  cid: string | null;
+  mint_tx_json: string | null;
+  move_tx_json: string | null;
+  error: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export function startScoreToken(db: Db, applicationId: number, wallet: string): number {
+  const t = now();
+  return Number(db.prepare("INSERT INTO score_tokens (application_id, wallet, status, created_at, updated_at) VALUES (?, ?, 'pending', ?, ?)")
+    .run(applicationId, wallet, t, t).lastInsertRowid);
+}
+
+export function finishScoreToken(
+  db: Db,
+  id: number,
+  f: { status: ScoreTokenStatus; nftId?: string; cid?: string; mintTx?: TxResult; moveTx?: TxResult | null; error?: string },
+): void {
+  db.prepare(`UPDATE score_tokens SET status = ?, nft_id = COALESCE(?, nft_id), cid = COALESCE(?, cid),
+              mint_tx_json = COALESCE(?, mint_tx_json), move_tx_json = COALESCE(?, move_tx_json), error = ?, updated_at = ? WHERE id = ?`)
+    .run(f.status, f.nftId ?? null, f.cid ?? null, f.mintTx ? JSON.stringify(f.mintTx) : null,
+      f.moveTx ? JSON.stringify(f.moveTx) : null, f.error ?? null, now(), id);
+}
+
+export function latestScoreToken(db: Db, wallet: string): ScoreTokenRow | undefined {
+  return db.prepare("SELECT * FROM score_tokens WHERE wallet = ? ORDER BY id DESC LIMIT 1").get(wallet) as ScoreTokenRow | undefined;
+}
+
 // ---------- credit pull cache ----------
 
 export function getCachedCredit(db: Db, address: string): { summary_json: string; pulled_at: string } | undefined {
@@ -227,5 +264,5 @@ export function setConfig(db: Db, key: string, value: string): void {
 // Clears every table except credit_reports, so a reset before a rehearsal does not spend real credit pulls again.
 // The route guards this with the broker key and DEMO_MODE=true.
 export function resetAll(db: Db): void {
-  db.exec("DELETE FROM payments; DELETE FROM audit_events; DELETE FROM applications; DELETE FROM ban_list; DELETE FROM config; DELETE FROM sqlite_sequence;");
+  db.exec("DELETE FROM payments; DELETE FROM audit_events; DELETE FROM score_tokens; DELETE FROM applications; DELETE FROM ban_list; DELETE FROM config; DELETE FROM sqlite_sequence;");
 }

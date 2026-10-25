@@ -954,6 +954,13 @@ export function BrokerApp() {
     setBrokerKey(key);
   }
 
+  function lockBroker() {
+    sessionStorage.removeItem("xrpl-broker-key");
+    setApiBrokerKey(null);
+    setBrokerKey("");
+    setActionError(null);
+  }
+
   function openPreview() {
     setApplications(demoApplications);
     setLoans(demoLoans);
@@ -1266,6 +1273,7 @@ export function BrokerApp() {
           <span className="signal-dot signal-dot--blue" />
           {preview || sampleMode ? "Sample XRP data" : applicationsError ? "Live data unavailable" : supportingDataAvailable ? "Live lending data" : "Live applications connected"}
           <small>{supportingDataAvailable ? `Alerts checked ${formatDate(new Date(alertCheckedAt).toISOString())}` : "Remaining APIs pending"}</small>
+          {!preview && !sampleMode ? <button className="text-button" type="button" onClick={lockBroker}>Change broker key</button> : null}
         </div>
       </aside>
       {menuOpen ? <button className="menu-scrim" type="button" aria-label="Close navigation" onClick={() => setMenuOpen(false)} /> : null}

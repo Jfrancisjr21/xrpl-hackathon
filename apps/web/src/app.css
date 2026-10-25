@@ -104,6 +104,7 @@ h1, h2, h3, p { margin-top: 0; }
 .nav-item b { min-width: 20px; height: 20px; padding: 0 6px; display: grid; place-items: center; border-radius: 999px; background: #1f2022; color: #fff; font-size: 11px; font-weight: 500; }
 .sidebar-meta { margin-top: auto; display: grid; grid-template-columns: 8px 1fr; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; }
 .sidebar-meta small { grid-column: 2; font-size: 11px; }
+.sidebar-meta .text-button { grid-column: 2; justify-self: start; font-size: 12px; }
 .signal-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--negative); flex: none; }
 .signal-dot--blue { background: var(--data); }
 .sidebar-close, .mobile-header, .menu-scrim { display: none; }

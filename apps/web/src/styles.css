@@ -107,6 +107,8 @@
 .segment-option input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 .segment-option.is-on { background: var(--surface); color: var(--text); }
 .segment-option:has(input:focus-visible) { outline: 2px solid var(--data); outline-offset: 1px; }
+.consent { display: flex; gap: 8px; align-items: flex-start; font-size: 14px; cursor: pointer; }
+.consent input { margin-top: 3px; }
 .notice { margin: 0; padding: 10px 12px; border-radius: var(--control-radius); background: var(--blue); color: var(--blue-ink); font-size: 14px; }
 
 .timeline-wrap { display: grid; gap: 8px; padding: 20px var(--pad); border-radius: var(--tile-radius); background: var(--blue); color: var(--blue-ink); }

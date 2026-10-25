@@ -18,13 +18,16 @@ export function ApplyForm({ address, assetLabel, loansOpenAt, onApplied }: {
 }) {
   const tx = useTx<ApplicationView>();
   const [value, setValue] = useState("");
-  const [paymentTotal, setPaymentTotal] = useState(6);
+  // 3 fits every approval level (level C and secured offers allow at most 3 payments).
+  const [paymentTotal, setPaymentTotal] = useState(3);
+  // FCRA permissible purpose: no consent, no credit pull, so the agent cannot assess the application.
+  const [creditConsent, setCreditConsent] = useState(false);
   const invalid = value !== "" && !isAmount(value);
   const opensAt = loansOpenAt ?? tx.opensAt;
   // R11: a 409 without opensAt means an application is already open; the screen shows it below.
   const alreadyOpen = tx.status === 409 && !tx.opensAt;
 
-  const submit = () => tx.run(() => api.apply({ borrowerAddress: address, amount: value, paymentTotal }), async () => { setValue(""); await onApplied(); });
+  const submit = () => tx.run(() => api.apply({ borrowerAddress: address, amount: value, paymentTotal, creditConsent }), async () => { setValue(""); await onApplied(); });
 
   return (
     <section className="card apply" aria-label="Apply for a loan">
@@ -52,9 +55,13 @@ export function ApplyForm({ address, assetLabel, loansOpenAt, onApplied }: {
           </label>
         ))}
       </fieldset>
-      <p className="hint">Demo loans use 60-second payments so you can watch the whole lifecycle.</p>
+      <p className="hint">Demo loans use 60-second payments so you can watch the whole lifecycle. Lower scores allow fewer payments.</p>
+      <label className="consent">
+        <input type="checkbox" checked={creditConsent} disabled={tx.pending} onChange={(e) => setCreditConsent(e.target.checked)} />
+        <span>I authorize a soft credit check. It does not affect my credit score.</span>
+      </label>
       <div className="move-actions">
-        <button type="button" className="button button--primary" disabled={!isAmount(value) || tx.pending || !!loansOpenAt} onClick={submit}>
+        <button type="button" className="button button--primary" disabled={!isAmount(value) || !creditConsent || tx.pending || !!loansOpenAt} onClick={submit}>
           {tx.pending ? "Scoring…" : "Apply"}
         </button>
       </div>

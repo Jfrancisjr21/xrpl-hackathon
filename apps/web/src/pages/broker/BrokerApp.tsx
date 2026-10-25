@@ -420,6 +420,7 @@ function ApplicationDetail({
   notice,
   opensAt,
   pendingDecision,
+  debtTotal,
   coverRateMinimum,
   onNote,
   onApprove,
@@ -432,6 +433,7 @@ function ApplicationDetail({
   notice: string | null;
   opensAt: string | null;
   pendingDecision: ApplicationDecision | null;
+  debtTotal: number;
   coverRateMinimum: number;
   onNote: (value: string) => void;
   onApprove: () => void;
@@ -440,7 +442,9 @@ function ApplicationDetail({
 }) {
   const pending = application.status === "pending_review";
   const [confirmingApproval, setConfirmingApproval] = useState(false);
-  const coverImpact = requiredCover({ debtTotal: application.amount, coverRateMinimum });
+  const debtAfterApproval = debtTotal + application.amount;
+  const coverBeforeApproval = requiredCover({ debtTotal, coverRateMinimum });
+  const coverAfterApproval = requiredCover({ debtTotal: debtAfterApproval, coverRateMinimum });
   const submittedAt = formatDate(application.createdAt);
 
   return (
@@ -519,7 +523,8 @@ function ApplicationDetail({
               <div><dt>Principal</dt><dd className="num">{formatMoney(application.amount)}</dd></div>
               <div><dt>Rate</dt><dd className="num">{formatPercent(application.rate)}</dd></div>
               <div><dt>Payments</dt><dd className="num">{formatNumber(application.payments)}</dd></div>
-              <div><dt>Required cover added</dt><dd className="num">{formatMoney(coverImpact)}</dd></div>
+              <div><dt>Total debt</dt><dd className="num">{formatMoney(debtTotal)} → {formatMoney(debtAfterApproval)}</dd></div>
+              <div><dt>Required cover</dt><dd className="num">{formatMoney(coverBeforeApproval)} → {formatMoney(coverAfterApproval)}</dd></div>
             </dl>
             {application.recommendation === "deny" ? <div className="decision-warning">The agent recommended denying this application. Approving would be a broker override.</div> : null}
             <div className="button-row confirm-actions">
@@ -540,6 +545,8 @@ function ApplicationsView({
   error,
   notice,
   opensAt,
+  debtTotal,
+  coverRateMinimum,
   loadError,
   pendingDecision,
   onSelect,
@@ -555,6 +562,8 @@ function ApplicationsView({
   error: string | null;
   notice: string | null;
   opensAt: string | null;
+  debtTotal: number;
+  coverRateMinimum: number;
   loadError: string | null;
   pendingDecision: ApplicationDecision | null;
   onSelect: (application: ApplicationView) => void;
@@ -587,7 +596,8 @@ function ApplicationsView({
           notice={notice}
           opensAt={opensAt}
           pendingDecision={pendingDecision}
-          coverRateMinimum={demoSnapshot.coverRateMinimum}
+          debtTotal={debtTotal}
+          coverRateMinimum={coverRateMinimum}
           onNote={onNote}
           onApprove={onApprove}
           onReject={onReject}
@@ -1271,7 +1281,7 @@ export function BrokerApp() {
               {supportingDataAvailable ? <Overview applications={applications} loans={loans} alerts={alerts} alertError={alertError} snapshot={snapshot} pendingCoverAction={pendingCoverAction} coverNotice={coverNotice} onApplication={openApplication} onLoan={openLoan} onNavigate={selectTab} onAdjustCover={adjustCover} onRefreshAlerts={() => void runAction(pollLoans)} /> : <LiveSectionUnavailable title="Live overview is not available yet" detail={supportingError ?? "The remaining broker APIs have not been connected."} onOpenApplications={() => selectTab("applications")} />}
             </div>
             <div hidden={tab !== "applications"}>
-              <ApplicationsView applications={applications} selected={selectedApplication} note={reviewNote} error={actionError} notice={selectedApplicationNotice} opensAt={actionOpensAt} loadError={applicationsError} pendingDecision={pendingDecision} onSelect={openApplication} onNote={setReviewNote} onApprove={() => void approveApplication()} onReject={() => void rejectApplication()} onClose={() => setSelectedApplicationId(null)} onRetry={() => void runAction(refreshApplications)} />
+              <ApplicationsView applications={applications} selected={selectedApplication} note={reviewNote} error={actionError} notice={selectedApplicationNotice} opensAt={actionOpensAt} debtTotal={snapshot.debtTotal} coverRateMinimum={snapshot.coverRateMinimum} loadError={applicationsError} pendingDecision={pendingDecision} onSelect={openApplication} onNote={setReviewNote} onApprove={() => void approveApplication()} onReject={() => void rejectApplication()} onClose={() => setSelectedApplicationId(null)} onRetry={() => void runAction(refreshApplications)} />
             </div>
             <div hidden={tab !== "loans"}>
               {supportingDataAvailable ? <LoansView loans={loans} applications={applications} alerts={alerts} live={!sampleMode && !preview} selected={selectedLoan} error={actionError} pendingAction={pendingLoanAction} receipt={loanActionReceipt} onSelect={openLoan} onAction={(action) => void manageLoan(action)} onClose={() => setSelectedLoanId(null)} /> : <LiveSectionUnavailable title="Live loans are not available yet" detail={supportingError ?? "The loans API has not been connected."} />}

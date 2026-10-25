@@ -10,9 +10,10 @@ import { originate, payLoan, manageLoan, deleteLoan, getLoanSnapshot, loanEntry 
 import { getAccountFacts } from "./account";
 import { DEMO_PROFILES } from "./demo-profiles";
 import { LedgerNotReadyError } from "./errors";
+import { burnScoreToken, fileStore, findScoreToken, giveScoreToken, mintScoreToken, type RecordStore } from "./score-token";
 import type {
   BrokerSnapshot, DemoWallet, DepositorPosition, FactsResult, LedgerService, LoanSnapshot, LoanTerms,
-  PayMode, Role, TxResult, VaultSnapshot,
+  PayMode, Role, ScoreToken, ScoreTokenFields, TxResult, VaultSnapshot,
 } from "./types";
 
 const toTx = (r: { hash: string; result: string }): TxResult => ({ hash: r.hash, result: r.result, explorerUrl: explorerUrl(r.hash) });
@@ -21,6 +22,7 @@ const envInt = (name: string, fallback: number) => Number(process.env[name] ?? f
 
 export class XrplLedger implements LedgerService {
   private wallets?: Record<Role, Wallet>;
+  private passports: RecordStore = fileStore();
 
   async init() {
     await connect();
@@ -173,5 +175,39 @@ export class XrplLedger implements LedgerService {
     const facts = role ? DEMO_PROFILES[role]?.facts : undefined;
     if (facts) return { facts, featureSource: "demo-profile" };
     return { facts: await getAccountFacts(await this.c(), address, this.w.issuer.address), featureSource: "ledger" };
+  }
+
+  // Feature 5. Burns any older passport, mints a new one, then moves it to the borrower.
+  // A failed move is not an error: the token stays on the issuer and verify still finds it.
+  async issueScoreToken(address: string, f: ScoreTokenFields) {
+    const c = await this.c(), issuer = this.w.issuer, holder = this.walletFor(address);
+    const old = await findScoreToken(c, this.passports, issuer.address, address);
+    if (old) await burnScoreToken(c, issuer, old.nftId, old.owner);
+    const now = Date.now(), days = envInt("PASSPORT_VALID_DAYS", 90);
+    const minted = await mintScoreToken(c, this.passports, issuer, {
+      v: 1, wallet: address, issuer: issuer.address, ...f,
+      issuedAt: new Date(now).toISOString(), expiresAt: new Date(now + days * 86_400_000).toISOString(),
+    });
+    let moveTx: TxResult | null = null;
+    if (process.env.SCORE_TOKEN_TO_HOLDER !== "false") {
+      try { moveTx = toTx(await giveScoreToken(c, issuer, holder, minted.nftId)); }
+      catch (e) { console.error("score passport stays on the issuer:", (e as Error).message); }
+    }
+    return { nftId: minted.nftId, cid: minted.cid, tx: toTx(minted), moveTx };
+  }
+
+  async getScoreToken(address: string): Promise<ScoreToken | null> {
+    const t = await findScoreToken(await this.c(), this.passports, this.w.issuer.address, address);
+    if (!t) return null;
+    const { v: _v, wallet: _w, ...r } = t.record;
+    return { ...r, nftId: t.nftId, cid: t.cid, holder: t.owner, expired: Date.parse(r.expiresAt) < Date.now() };
+  }
+
+  getScoreRecord(cid: string) { return this.passports.get(cid); }
+
+  async revokeScoreToken(address: string) {
+    const c = await this.c();
+    const t = await findScoreToken(c, this.passports, this.w.issuer.address, address);
+    return t ? toTx(await burnScoreToken(c, this.w.issuer, t.nftId, t.owner)) : null;
   }
 }

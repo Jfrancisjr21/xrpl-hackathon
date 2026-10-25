@@ -12,6 +12,9 @@ wallets.json
 *.db-shm
 state.json
 
+# Feature 5 passport records (served by the API; content-addressed, rebuildable by re-issuing)
+passports/
+
 .DS_Store
 
 # OFAC raw downloads (rebuild with sanctions:fetch)

@@ -13,6 +13,7 @@
     "ledger:check-wallets": "pnpm --filter @hack/ledger check-wallets",
     "ledger:bootstrap": "pnpm --filter @hack/ledger bootstrap",
     "ledger:new-vault": "pnpm --filter @hack/ledger new-vault",
-    "ledger:lifecycle": "pnpm --filter @hack/ledger lifecycle"
+    "ledger:lifecycle": "pnpm --filter @hack/ledger lifecycle",
+    "ledger:score-token": "pnpm --filter @hack/ledger score-token"
   }
 }

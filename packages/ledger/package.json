@@ -11,7 +11,8 @@
     "check-wallets": "tsx src/scripts/check-wallets.ts",
     "bootstrap": "tsx src/scripts/bootstrap.ts",
     "lifecycle": "tsx src/scripts/lifecycle.ts",
-    "new-vault": "tsx src/scripts/new-vault.ts"
+    "new-vault": "tsx src/scripts/new-vault.ts",
+    "score-token": "tsx src/scripts/score-token.ts"
     
   },
   "devDependencies": {

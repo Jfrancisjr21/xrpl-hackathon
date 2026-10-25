@@ -1,7 +1,7 @@
 import cors from "cors";
 import express from "express";
 import type { LedgerService } from "@hack/ledger";
-import type { HealthResponse, VaultPhase } from "@hack/shared";
+import type { Alert, HealthResponse, VaultPhase } from "@hack/shared";
 import type { Db } from "./db/db";
 import { errorHandler } from "./middleware";
 import { agentRouter, demoRouter } from "./routes/agent";
@@ -16,6 +16,7 @@ export interface Deps {
   db: Db;
   ledger: LedgerService;
   underwrite: Underwrite;
+  alerts?: () => Alert[]; // the overdue monitor's current alerts (Feature 2)
 }
 
 const network = (url = "") => (url.includes("devnet") ? "devnet" : url.includes("testnet") ? "testnet" : url || "not configured");
@@ -42,6 +43,11 @@ export function createApp(deps: Deps) {
 
   app.get("/api/wallets", (_req, res) => {
     res.json(deps.ledger.getWallets());
+  });
+
+  // Feature 2: the broker dashboard polls this every 10 s for "Payment overdue" badges.
+  app.get("/api/alerts", (_req, res) => {
+    res.json(deps.alerts?.() ?? []);
   });
 
   app.use("/api/applications", applicationsRouter(deps));

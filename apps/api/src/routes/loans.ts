@@ -43,6 +43,10 @@ export function loansRouter({ db, ledger }: Deps) {
     const row = ourLoan(loanId);
     if (row.loan_outcome) throw new HttpError(409, `Loan is already ${row.loan_outcome}`);
     const before = await onLedger(() => ledger.getLoan(loanId));
+    // XLS-66: once a payment is overdue the ledger only accepts the late installment; a full payoff fails (tecEXPIRED).
+    if (mode === "payoff" && before.nextDueIso && Date.now() > Date.parse(before.nextDueIso)) {
+      throw new HttpError(409, "A payment is overdue, so the loan cannot be paid off yet. Pay the amount due first");
+    }
     const { tx, amount } = await onLedger(() => ledger.payLoan(loanId, mode));
     const after = await ledger.getLoan(loanId).catch(() => null);
     // The ledger reports only the total paid. Principal paid is the drop in outstanding principal;

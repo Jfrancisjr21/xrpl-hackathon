@@ -334,6 +334,8 @@ export const RevenueView = z.object({
   depositorShare: Amount, // interestCollected - platformFees
   paymentsCount: z.number().int().min(0),
   managementFeeRate: Rate,
+  serviceFees: Amount.optional(), // flat fee on every payment, paid to the broker
+  originationFees: Amount.optional(), // flat fee taken from each loan's principal, paid to the broker
 });
 export type RevenueView = z.infer<typeof RevenueView>;
 

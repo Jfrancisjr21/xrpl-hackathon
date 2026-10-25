@@ -7,7 +7,7 @@
   "decision": {
     "approved": false,
     "sanctions": { "blocked": false },
-    "facts": { "ageDays": 9, "txCountSample": 24, "trustlineCount": 0, "hasCredential": false },
+    "facts": { "ageDays": 15, "txCountSample": 40, "trustlineCount": 0, "hasCredential": false },
     "featureSource": "demo-profile",
     "score": { "age": 1, "activity": 6, "trustlines": 0, "credential": 0, "total": 7 },
     "minScore": 50,

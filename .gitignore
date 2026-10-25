@@ -8,6 +8,8 @@ wallets.json
 # Local state: SQLite audit log, ledger vault/broker IDs
 *.db
 *.db-journal
+*.db-wal
+*.db-shm
 state.json
 
 .DS_Store

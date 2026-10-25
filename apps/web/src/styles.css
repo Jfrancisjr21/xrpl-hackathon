@@ -19,39 +19,146 @@
 }
 .shell-main { max-width: 1100px; margin: 0 auto; padding: 32px 24px 64px; }
 
-.screen { display: grid; gap: 16px; color: var(--text); }
-.screen h1 { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -.01em; }
+/* Pastel consumer (taste skill): each figure sits on a pale tile of its own hue with the dark of that hue as
+   ink, under one large radius. Scoped to .screen, so Ilian's broker workspace keeps app.css as it is.
+   Every ink is at least 7:1 on its tile. */
+.screen {
+  --tile-radius: 20px; --control-radius: 10px;
+  --blue: #e3efff;  --blue-ink: #0a3a80;
+  --teal: #daf2ee;  --teal-ink: #0e4c45;
+  --amber: #fdefd5; --amber-ink: #6b3a06;
+  --rose: #fde6ea;  --rose-ink: #7a1d2a;
+  --action: #1d5fd6; --action-hover: #174cb0;
+  display: grid; gap: 16px; color: var(--text);
+}
+.screen h1 { margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -.01em; }
 .lead { margin: 0; max-width: 70ch; color: var(--muted); font-size: 15px; line-height: 1.5; }
 .hint { margin: 0; color: var(--muted); font-size: 14px; }
 
-.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-card); padding: var(--pad); }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--tile-radius, var(--radius-card)); padding: var(--pad); }
 .card h2 { margin: 0 0 8px; font-size: 16px; font-weight: 500; }
 .card p { margin: 0; }
+.tile { border: 0; }
+.tile-blue { background: var(--blue); color: var(--blue-ink); }
+.tile-teal { background: var(--teal); color: var(--teal-ink); }
+.tile-amber { background: var(--amber); color: var(--amber-ink); }
+.figure { font-size: 32px; font-weight: 600; letter-spacing: -.01em; }
 
-.phase { padding: 12px 16px; border-radius: var(--radius-control); background: var(--pill-neutral-bg); color: var(--pill-neutral-ink); font-size: 14px; }
+.phase { padding: 12px 16px; border-radius: var(--control-radius); background: var(--pill-neutral-bg); color: var(--pill-neutral-ink); font-size: 14px; }
 .phase--open { background: var(--pill-positive-bg); color: var(--pill-positive-ink); }
 
-.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-card); }
-.stat { display: grid; gap: 4px; padding: 20px var(--pad); }
-.stat + .stat { border-left: 1px solid var(--border); }
-.stat span { font-size: 12px; color: var(--muted); }
-.stat b { font-size: 24px; font-weight: 500; }
-.stat small { font-size: 13px; font-weight: 400; color: var(--muted); }
+/* Three tiles, one hue each: what is in the vault, what can still be lent, how much is out. */
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.stat { display: grid; gap: 4px; padding: 20px var(--pad); border-radius: var(--tile-radius); }
+.stat:nth-child(1) { background: var(--blue); color: var(--blue-ink); }
+.stat:nth-child(2) { background: var(--teal); color: var(--teal-ink); }
+.stat:nth-child(3) { background: var(--amber); color: var(--amber-ink); }
+.stat span { font-size: 13px; font-weight: 500; }
+.stat b { font-size: 28px; font-weight: 600; }
+.stat small { font-size: 13px; font-weight: 500; }
+
+.screen .button { border-radius: var(--control-radius); }
+.screen .button--primary { background: var(--action); }
+.screen .button--primary:hover:not(:disabled) { background: var(--action-hover); }
+
+.move { display: grid; gap: 10px; }
+.move h2 { margin: 0; }
+.field { display: grid; gap: 8px; font-size: 14px; font-weight: 500; }
+.field-input {
+  display: flex; align-items: center; max-width: 360px; height: 40px; border: 1px solid var(--control);
+  border-radius: var(--control-radius); background: var(--surface);
+}
+.field-input:focus-within { border-color: var(--text); outline: 1px solid var(--text); }
+.field-input input { flex: 1; min-width: 0; height: 100%; border: 0; outline: 0; background: transparent; padding: 0 12px; font-size: 16px; font-variant-numeric: tabular-nums; }
+.field-input small { padding-right: 12px; color: var(--muted); font-size: 12px; font-weight: 500; }
+.help { margin: 0; font-size: 12px; color: var(--muted); }
+.help--error { color: var(--negative); }
+.move-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.warn { margin: 0; padding: 10px 12px; border-radius: var(--radius-control); background: var(--pill-warning-bg); color: var(--pill-warning-ink); font-size: 14px; }
 
 .error { padding: 10px 12px; border-radius: var(--radius-control); background: var(--pill-negative-bg); color: var(--pill-negative-ink); font-size: 14px; }
 .receipt { margin: 0; padding: 8px 12px; border-radius: var(--radius-control); background: var(--pill-positive-bg); color: var(--pill-positive-ink); font-size: 13px; }
 .receipt a { color: inherit; }
 
 .picker { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--gap); }
+/* Each borrower keeps one hue, at least 60 degrees from the next: Alice blue, Carol teal, Bob amber, Mallory rose. */
 .persona {
   display: grid; gap: 6px; align-content: start; justify-items: start; padding: 16px; text-align: left;
-  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-card); color: var(--text); cursor: pointer;
+  background: var(--surface); border: 2px solid transparent; border-radius: var(--tile-radius); color: var(--text); cursor: pointer;
+  transition: transform 120ms ease;
 }
-.persona:hover { border-color: var(--control); }
-.persona[aria-pressed="true"] { border-color: var(--text); outline: 1px solid var(--text); }
-.persona b { font-size: 15px; font-weight: 600; }
-.persona .desc { font-size: 13px; color: var(--muted); }
-.persona code { font-size: 12px; color: var(--muted); }
+.persona[data-role="alice"] { background: var(--blue); color: var(--blue-ink); }
+.persona[data-role="carol"] { background: var(--teal); color: var(--teal-ink); }
+.persona[data-role="bob"] { background: var(--amber); color: var(--amber-ink); }
+.persona[data-role="borrower"] { background: var(--rose); color: var(--rose-ink); }
+.persona:hover { transform: translateY(-1px); }
+.persona[aria-pressed="true"] { border-color: currentColor; }
+.persona b { font-size: 16px; font-weight: 600; }
+.persona .desc { font-size: 13px; }
+.persona code { font-size: 12px; opacity: .85; }
+@media (prefers-reduced-motion: reduce) { .persona { transition: none; } .persona:hover { transform: none; } }
+
+/* Borrower: the form, the timeline (a blue tile) and the decision (the white panel that holds the evidence). */
+.apply { display: grid; gap: 10px; }
+.apply h2 { margin: 0; }
+.segment { display: inline-flex; gap: 4px; margin: 0; padding: 4px; border: 0; border-radius: var(--control-radius); background: var(--pill-neutral-bg); justify-self: start; }
+.segment legend { float: left; width: 100%; margin-bottom: 6px; padding: 0; font-size: 14px; font-weight: 500; }
+.segment-option { position: relative; min-width: 56px; padding: 8px 14px; border-radius: 8px; text-align: center; font-size: 14px; font-weight: 500; color: var(--muted); cursor: pointer; }
+.segment-option input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.segment-option.is-on { background: var(--surface); color: var(--text); }
+.segment-option:has(input:focus-visible) { outline: 2px solid var(--data); outline-offset: 1px; }
+.notice { margin: 0; padding: 10px 12px; border-radius: var(--control-radius); background: var(--blue); color: var(--blue-ink); font-size: 14px; }
+
+.timeline-wrap { display: grid; gap: 8px; padding: 20px var(--pad); border-radius: var(--tile-radius); background: var(--blue); color: var(--blue-ink); }
+.timeline { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin: 0; padding: 0; list-style: none; }
+.step { display: grid; gap: 8px; font-size: 13px; font-weight: 500; opacity: .55; }
+.step-dot { width: 100%; height: 6px; border-radius: 999px; background: currentColor; opacity: .3; }
+.step--done, .step--current, .step--failed { opacity: 1; }
+.step--done .step-dot { opacity: 1; }
+.step--current .step-dot { opacity: 1; background: var(--action); }
+.step--current { font-weight: 700; }
+.step--failed { color: var(--negative); }
+.step--failed .step-dot { opacity: 1; background: var(--negative); }
+.timeline-note { margin: 0; font-size: 14px; font-weight: 500; color: var(--negative); }
+
+.decision { display: grid; gap: 14px; }
+.decision-head { display: flex; align-items: center; gap: 10px; }
+.decision-head h2 { margin: 0; }
+.score { display: grid; gap: 8px; }
+.score-line { display: flex; align-items: baseline; gap: 10px; font-size: 14px; }
+.score-line b { font-size: 24px; font-weight: 600; }
+.score-min { color: var(--muted); font-size: 13px; }
+.score-bar { position: relative; height: 10px; border-radius: 999px; background: var(--pill-neutral-bg); overflow: visible; }
+.score-bar span { display: block; height: 100%; border-radius: inherit; background: var(--action); }
+.score-bar i { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--text); }
+.score-parts, .cost dl { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 0; }
+.score-parts div, .cost dl div { padding: 10px 12px; border-radius: var(--control-radius); background: var(--raised); }
+.score-parts dt, .cost dt { font-size: 12px; color: var(--muted); }
+.score-parts dd, .cost dd { margin: 2px 0 0; font-size: 15px; font-weight: 600; }
+.sanctions { margin: 0; font-size: 14px; }
+.sanctions--blocked { color: var(--negative); }
+.offer { margin: 0; font-size: 15px; }
+.offer b { font-size: 20px; }
+.explanation { margin: 0; font-size: 15px; line-height: 1.5; }
+.cost { display: grid; gap: 8px; }
+.cost h3 { margin: 0; font-size: 15px; font-weight: 600; }
+.cost dl { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.decision-receipt { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0; font-size: 14px; }
+.decision-receipt code { padding: 2px 6px; border-radius: 6px; background: var(--raised); }
+.decision-receipt a { color: var(--action); font-weight: 500; }
+
+/* My loan (Phase 4): the facts as tone-step cells, payments as the primary action, the schedule as a plain list. */
+.my-loan { display: grid; gap: 14px; }
+.loan-facts { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin: 0; }
+.loan-facts div { padding: 10px 12px; border-radius: var(--control-radius); background: var(--raised); }
+.loan-facts dt { font-size: 12px; color: var(--muted); }
+.loan-facts dd { margin: 2px 0 0; font-size: 15px; font-weight: 600; }
+.ok { margin: 0; padding: 10px 12px; border-radius: var(--control-radius); background: var(--pill-positive-bg); color: var(--pill-positive-ink); font-size: 14px; font-weight: 500; }
+.schedule { display: grid; gap: 8px; }
+.schedule h2 { margin: 0; }
+.schedule ol { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.schedule li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--rule); font-size: 14px; }
+.schedule li:last-child { border-bottom: 0; }
 
 /* BrokerApp was built as a whole page with bars fixed to the window. Inside the shell they sit below the
    shell header instead of over it: the sidebar takes its grid column, the phone menu bar sticks in the tab. */
@@ -66,7 +173,13 @@
 @media (max-width: 760px) {
   .picker { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .stats { grid-template-columns: minmax(0, 1fr); }
-  .stat + .stat { border-left: 0; border-top: 1px solid var(--border); }
+  .timeline { grid-template-columns: minmax(0, 1fr); }
+  .step { grid-template-columns: 24px 1fr; align-items: center; }
+  .step-dot { height: 10px; }
+  .score-parts, .cost dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cost dl div:last-child:nth-child(odd) { grid-column: 1 / -1; }
+  .loan-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .loan-facts div:last-child:nth-child(odd) { grid-column: 1 / -1; }
 }
 @media (max-width: 640px) {
   .shell-bar, .shell-main { padding-left: 16px; padding-right: 16px; }

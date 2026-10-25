@@ -1,6 +1,6 @@
 import type {
   AgentDelegation, AgentPolicy, AgentView, ApplicationStatus, ApplicationView, AuditEvent, BrokerView, DecisionReceipt,
-  DemoWallet, HealthResponse, LoanApplicationInput, LoanView, PayMode, PayResult, RevenueView, TxResult, VaultView,
+  DemoWallet, HealthResponse, LoanApplicationInput, LoanView, PayMode, PayResult, RevenueView, ScoreTokenView, TxResult, VaultView,
 } from "@hack/shared";
 import { samples, type VerifyResult } from "../samples";
 import { ApiError } from "./apiError";
@@ -70,4 +70,8 @@ export const api = {
   setDelegation: (body: AgentDelegation) => post<TxResult | null>("/agent/delegation", body),
   // Feature 5: public score-passport check, no key needed
   verify: (address: string) => read<VerifyResult>(`/verify/${q(address)}`, () => samples.verify(address)),
+  // Feature 5: the borrower's own passport (our issuing record plus the ledger state), public
+  scoreToken: (address: string) =>
+    read<ScoreTokenView>(`/score-tokens/${q(address)}`, () => ({ address, status: null, applicationId: null, onLedger: null })),
+  resetDemo: () => http<{ ok: true }>("/demo/reset", { method: "DELETE" }),
 };

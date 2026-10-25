@@ -5,7 +5,7 @@ import { AgentView, BrokerView, RevenueView, type Decision } from "@hack/shared"
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "../app";
 import { createApplication, listApplications, listPayments, openDb, transition, type Db } from "../db/db";
-import { placeholderUnderwrite } from "../services/underwriting";
+import { testUnderwrite } from "./test-underwrite";
 
 const KEY = "test-broker-key-123";
 const ALICE = "rByhcLgLG7rzJ2ceqzJgM4bFjuQodSrYFb";
@@ -45,7 +45,7 @@ beforeEach(() => {
   broker = { debtTotal: "500", coverAvailable: "1000" };
   principal = "500";
   delegationTx = null;
-  server = createApp({ db, ledger: fakeLedger, underwrite: placeholderUnderwrite }).listen(0);
+  server = createApp({ db, ledger: fakeLedger, underwrite: testUnderwrite }).listen(0);
   base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
 });
 afterEach(() => server.close());

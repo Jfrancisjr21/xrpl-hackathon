@@ -2,7 +2,8 @@ import "dotenv/config";
 import { XrplLedger } from "@hack/ledger";
 import { createApp } from "./app";
 import { openDb } from "./db/db";
-import { placeholderUnderwrite } from "./services/underwriting";
+import { demoBureau } from "./services/credit";
+import { riskUnderwrite } from "./services/underwriting";
 
 const ledger = new XrplLedger();
 try {
@@ -15,6 +16,7 @@ try {
   process.exit(1);
 }
 
-const app = createApp({ db: openDb(), ledger, underwrite: placeholderUnderwrite });
+const underwrite = riskUnderwrite(ledger, demoBureau(ledger.getWallets()));
+const app = createApp({ db: openDb(), ledger, underwrite });
 const port = Number(process.env.PORT ?? 3001);
 app.listen(port, () => console.log(`api listening on :${port}`));

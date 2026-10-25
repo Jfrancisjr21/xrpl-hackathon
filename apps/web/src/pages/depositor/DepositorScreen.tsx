@@ -3,7 +3,7 @@ import type { TxResult, VaultView } from "@hack/shared";
 import { api } from "../../lib/api";
 import { usePoll, useTx } from "../../lib/hooks";
 import { useWallet } from "../../lib/wallet";
-import { amount, date, isAmount } from "../../lib/format";
+import { ASSET, amount, date, isAmount } from "../../lib/format";
 import { ErrorBanner } from "../../components/ErrorBanner";
 import { PhaseBanner } from "../../components/PhaseBanner";
 import { Stat } from "../../components/Stat";
@@ -36,22 +36,22 @@ export function DepositorScreen() {
 
   return (
     <div className="screen">
-      <h1>Earn yield on {v.assetLabel}</h1>
+      <h1>Earn yield on {ASSET}</h1>
       <p className="lead">Lenders fund a shared vault. Approved borrowers take loans from it and pay interest; the platform keeps 10% of that interest and lenders earn the rest.</p>
       <PhaseBanner vault={v} />
       <ErrorBanner error={vault.error && `Couldn't refresh the vault; showing the last figures. ${vault.error}`} onRetry={vault.refresh} />
       <div className="stats">
-        <Stat label="Total in vault" value={amount(v.assetsTotal)} unit={v.assetLabel} />
-        <Stat label="Available to lend" value={amount(v.assetsAvailable)} unit={v.assetLabel} />
+        <Stat label="Total in vault" value={amount(v.assetsTotal)} unit={ASSET} />
+        <Stat label="Available to lend" value={amount(v.assetsAvailable)} unit={ASSET} />
         <Stat label="Lent out" value={`${v.utilizationPct.toFixed(1)}%`} />
       </div>
       <section className="card tile tile-blue" aria-label="Your position">
         <h2>{wallet.label}'s position</h2>
-        <p className="num"><b className="figure">{amount(v.position?.deposited)}</b> {v.assetLabel} · {(v.position?.sharePct ?? 0).toFixed(1)}% of the vault</p>
+        <p className="num"><b className="figure">{amount(v.position?.deposited)}</b> {ASSET} · {(v.position?.sharePct ?? 0).toFixed(1)}% of the vault</p>
       </section>
       {/* Keyed by wallet: switching wallets starts a fresh form, so no amount, error or receipt carries over. */}
       <MoveForm key={wallet.address} vault={v} address={wallet.address} label={wallet.label} now={now} onDone={vault.refresh} />
-      {v.lossUnrealized !== "0" && <p className="warn">Unrealized loss from impaired loans: {amount(v.lossUnrealized)} {v.assetLabel}</p>}
+      {v.lossUnrealized !== "0" && <p className="warn">Unrealized loss from impaired loans: {amount(v.lossUnrealized)} {ASSET}</p>}
     </div>
   );
 }
@@ -82,11 +82,11 @@ function MoveForm({ vault: v, address, label, now, onDone }: {
             aria-invalid={invalid} aria-describedby="move-help"
             onChange={(e) => setValue(e.target.value.trim())}
           />
-          <small>{v.assetLabel}</small>
+          <small>{ASSET}</small>
         </span>
       </label>
       <p id="move-help" className={invalid ? "help help--error" : "help"}>
-        {invalid ? `Enter a whole number of ${v.assetLabel}, like 100.` : `Whole ${v.assetLabel} only.`}
+        {invalid ? `Enter a whole number of ${ASSET}, like 100.` : `Whole ${ASSET} only.`}
       </p>
       <div className="move-actions">
         <button type="button" className="button button--primary" disabled={!!locks.deposit || !isAmount(value) || tx.pending} onClick={() => move("deposit")}>
@@ -98,7 +98,7 @@ function MoveForm({ vault: v, address, label, now, onDone }: {
       </div>
       {locks.deposit && <p className="hint">{locks.deposit}</p>}
       {locks.withdraw && <p className="hint">{locks.withdraw}{v.redemptionDate ? ` (${date(v.redemptionDate)})` : ""}</p>}
-      {!locks.withdraw && overPosition && <p className="hint">{label} has {amount(held)} {v.assetLabel} in the vault to withdraw.</p>}
+      {!locks.withdraw && overPosition && <p className="hint">{label} has {amount(held)} {ASSET} in the vault to withdraw.</p>}
       <ErrorBanner error={tx.error} />
       <TxReceipt tx={tx.result} />
     </section>

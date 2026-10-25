@@ -1,5 +1,8 @@
 import { AmountInput } from "@hack/shared";
 
+// The vault asset is a test token on the ledger (TSTUSD); the app always shows it as XRP.
+export const ASSET = "XRP";
+
 export const shortAddress = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
 export const shortHash = (h: string) => `${h.slice(0, 8)}…${h.slice(-6)}`;
 export const amount = (s: string | null | undefined) => Number(s ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 });

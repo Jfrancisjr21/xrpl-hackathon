@@ -1,6 +1,5 @@
 import type {
   AgentView as ContractAgent,
-  Alert,
   ApplicationView as ContractApplication,
   AuditEvent,
   BrokerView,
@@ -15,10 +14,6 @@ const rate = (value: number | null) => (value ?? 0) / 1_000;
 
 export function applicationFromContract(application: ContractApplication): ApplicationView {
   const score = application.decision.score;
-  const status: ApplicationView["status"] =
-    application.status === "active" ? "approved"
-      : application.status === "denied" || application.status === "failed" ? "rejected"
-        : application.status;
 
   return {
     id: String(application.id),
@@ -30,7 +25,7 @@ export function applicationFromContract(application: ContractApplication): Appli
     payments: application.paymentTotal,
     recommendation: application.decision.approved ? "approve" : score ? "review" : "deny",
     sanctions: application.decision.sanctions.blocked ? "flagged" : "clear",
-    status,
+    status: application.status,
     createdAt: application.createdAt,
     explanation: application.decision.explanation,
     featureSource: application.decision.featureSource ?? "Sanctions gate",
@@ -43,7 +38,11 @@ export function applicationFromContract(application: ContractApplication): Appli
       { label: "Trust lines", points: score.trustlines, note: "XRPL trust lines" },
       { label: "Credential", points: score.credential, note: "Verified credential" },
     ] : [],
-    decisionMemoTx: application.tx?.hash,
+    decisionHash: application.decisionHash,
+    loanId: application.loanId,
+    txHash: application.tx?.hash,
+    brokerNote: application.brokerNote,
+    error: application.error,
   };
 }
 
@@ -57,8 +56,8 @@ export function loanFromContract(loan: ContractLoan): LoanView {
     rate: rate(loan.interestRate),
     paymentsRemaining: loan.paymentsRemaining ?? 0,
     nextDue: loan.nextDueIso ?? "",
-    totalOwed: amount(loan.totalOwed),
-    gracePeriodSeconds: 0,
+    totalOwed: loan.totalOwed === null ? null : amount(loan.totalOwed),
+    gracePeriodSeconds: null,
     status: loan.status,
     canImpair: loan.canImpair,
     canDefault: loan.canDefault,
@@ -108,6 +107,8 @@ export function auditFromContract(event: AuditEvent): AuditEntry {
   };
 }
 
-export function alertFromContract(alert: Alert) {
-  return { loanId: alert.loanId, message: `Payment overdue since ${alert.nextDueIso}` };
+export function alertsFromLoans(loans: ContractLoan[]) {
+  return loans
+    .filter((loan) => loan.canImpair || loan.status === "impaired")
+    .map((loan) => ({ loanId: loan.loanId, message: "Payment overdue" }));
 }

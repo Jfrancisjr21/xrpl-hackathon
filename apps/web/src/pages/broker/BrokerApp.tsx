@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
+import { CopyButton } from "../../components/CopyButton";
+import { Countdown } from "../../components/Countdown";
 import { StatusBadge } from "../../components/StatusBadge";
-import { api, setBrokerKey as setApiBrokerKey } from "../../lib/api";
+import { ApiError, api, setBrokerKey as setApiBrokerKey } from "../../lib/api";
 import {
   agentFromContract,
-  alertFromContract,
+  alertsFromLoans,
   applicationFromContract,
   auditFromContract,
   loanFromContract,
@@ -140,6 +142,16 @@ function BrokerSkeleton() {
         ))}
       </div>
     </div>
+  );
+}
+
+function LiveSectionUnavailable({ title, detail, onOpenApplications }: { title: string; detail: string; onOpenApplications?: () => void }) {
+  return (
+    <section className="panel unavailable-panel" role="status">
+      <h2>{title}</h2>
+      <p>{detail}</p>
+      {onOpenApplications ? <button className="button button--secondary" type="button" onClick={onOpenApplications}>Open live applications</button> : null}
+    </section>
   );
 }
 
@@ -405,7 +417,10 @@ function ApplicationDetail({
   application,
   note,
   error,
+  notice,
+  opensAt,
   pendingDecision,
+  debtTotal,
   coverRateMinimum,
   onNote,
   onApprove,
@@ -415,7 +430,10 @@ function ApplicationDetail({
   application: ApplicationView;
   note: string;
   error: string | null;
+  notice: string | null;
+  opensAt: string | null;
   pendingDecision: ApplicationDecision | null;
+  debtTotal: number;
   coverRateMinimum: number;
   onNote: (value: string) => void;
   onApprove: () => void;
@@ -424,7 +442,9 @@ function ApplicationDetail({
 }) {
   const pending = application.status === "pending_review";
   const [confirmingApproval, setConfirmingApproval] = useState(false);
-  const coverImpact = requiredCover({ debtTotal: application.amount, coverRateMinimum });
+  const debtAfterApproval = debtTotal + application.amount;
+  const coverBeforeApproval = requiredCover({ debtTotal, coverRateMinimum });
+  const coverAfterApproval = requiredCover({ debtTotal: debtAfterApproval, coverRateMinimum });
   const submittedAt = formatDate(application.createdAt);
 
   return (
@@ -462,13 +482,23 @@ function ApplicationDetail({
           </div>
         ) : <div className="empty-state">Scoring stopped at the sanctions gate.</div>}
       </section>
+      {application.brokerNote || application.error ? (
+        <section className="detail-section outcome-section">
+          <h3>{application.error ? "Origination failure" : "Broker note"}</h3>
+          <p>{application.error ?? application.brokerNote}</p>
+        </section>
+      ) : null}
       <section className="detail-section receipt-section">
         <h3>Decision receipt</h3>
-        {application.decisionMemoTx ? (
-          <a href={explorerUrl(application.decisionMemoTx)} target="_blank" rel="noreferrer">Open LoanSet memo on XRPL Explorer</a>
-        ) : <p>The explorer link appears after LoanSet is confirmed.</p>}
+        <dl className="receipt-list">
+          <div><dt>Decision hash</dt><dd>{application.decisionHash ? <><code title={application.decisionHash}>{shortId(application.decisionHash)}</code><CopyButton text={application.decisionHash} /></> : "—"}</dd></div>
+          <div><dt>Loan ID</dt><dd>{application.loanId ? <code title={application.loanId}>{shortId(application.loanId)}</code> : "—"}</dd></div>
+          <div><dt>Ledger transaction</dt><dd>{application.txHash ? <a href={explorerUrl(application.txHash)} target="_blank" rel="noreferrer">Open in XRPL Explorer</a> : "—"}</dd></div>
+        </dl>
       </section>
+      {notice ? <div className="action-success" role="status">{notice}</div> : null}
       {error ? <div className="inline-error" role="alert">{error}</div> : null}
+      {opensAt ? <div className="decision-warning" role="status">The Devnet deposit window opens in <Countdown to={opensAt} />. This application remains pending.</div> : null}
       {pendingDecision ? (
         <div className="action-progress" role="status" aria-live="polite">
           {pendingDecision === "approve" ? "Originating the loan on Devnet…" : "Rejecting application…"}
@@ -493,7 +523,8 @@ function ApplicationDetail({
               <div><dt>Principal</dt><dd className="num">{formatMoney(application.amount)}</dd></div>
               <div><dt>Rate</dt><dd className="num">{formatPercent(application.rate)}</dd></div>
               <div><dt>Payments</dt><dd className="num">{formatNumber(application.payments)}</dd></div>
-              <div><dt>Required cover added</dt><dd className="num">{formatMoney(coverImpact)}</dd></div>
+              <div><dt>Total debt</dt><dd className="num">{formatMoney(debtTotal)} → {formatMoney(debtAfterApproval)}</dd></div>
+              <div><dt>Required cover</dt><dd className="num">{formatMoney(coverBeforeApproval)} → {formatMoney(coverAfterApproval)}</dd></div>
             </dl>
             {application.recommendation === "deny" ? <div className="decision-warning">The agent recommended denying this application. Approving would be a broker override.</div> : null}
             <div className="button-row confirm-actions">
@@ -512,23 +543,35 @@ function ApplicationsView({
   selected,
   note,
   error,
+  notice,
+  opensAt,
+  debtTotal,
+  coverRateMinimum,
+  loadError,
   pendingDecision,
   onSelect,
   onNote,
   onApprove,
   onReject,
   onClose,
+  onRetry,
 }: {
   applications: ApplicationView[];
   selected: ApplicationView | null;
   note: string;
   error: string | null;
+  notice: string | null;
+  opensAt: string | null;
+  debtTotal: number;
+  coverRateMinimum: number;
+  loadError: string | null;
   pendingDecision: ApplicationDecision | null;
   onSelect: (application: ApplicationView) => void;
   onNote: (value: string) => void;
   onApprove: () => void;
   onReject: () => void;
   onClose: () => void;
+  onRetry: () => void;
 }) {
   const [filter, setFilter] = useState<ApplicationFilter>("pending_review");
   const visibleApplications = filterApplications(applications, filter);
@@ -537,6 +580,7 @@ function ApplicationsView({
   return (
     <div className={`split-view ${selected ? "split-view--detail" : ""}`}>
       <Panel title="Application queue" action={<span className="queue-count">{formatNumber(visibleApplications.length)} shown</span>} className="list-pane">
+        {loadError ? <div className="block-error" role="alert"><span>{loadError}</span><button className="text-button" type="button" onClick={onRetry}>Retry</button></div> : null}
         <div className="filter-row">
           <button className={`filter-button ${filter === "pending_review" ? "filter-button--active" : ""}`} type="button" aria-pressed={filter === "pending_review"} onClick={() => setFilter("pending_review")}>Pending review ({formatNumber(pendingCount)})</button>
           <button className={`filter-button ${filter === "all" ? "filter-button--active" : ""}`} type="button" aria-pressed={filter === "all"} onClick={() => setFilter("all")}>All applications ({formatNumber(applications.length)})</button>
@@ -549,8 +593,11 @@ function ApplicationsView({
           application={selected}
           note={note}
           error={error}
+          notice={notice}
+          opensAt={opensAt}
           pendingDecision={pendingDecision}
-          coverRateMinimum={demoSnapshot.coverRateMinimum}
+          debtTotal={debtTotal}
+          coverRateMinimum={coverRateMinimum}
           onNote={onNote}
           onApprove={onApprove}
           onReject={onReject}
@@ -584,13 +631,13 @@ const loanActionCopy: Record<LoanAction, { label: string; description: string; d
   },
 };
 
-function LoansTable({ loans, selectedId, onSelect }: { loans: LoanView[]; selectedId?: string | null; onSelect: (loan: LoanView) => void }) {
+function LoansTable({ loans, alerts, selectedId, onSelect }: { loans: LoanView[]; alerts: AlertView[]; selectedId?: string | null; onSelect: (loan: LoanView) => void }) {
   if (!loans.length) return <div className="empty-state">No loans are in the broker loan book.</div>;
 
   return (
     <div className="table-wrap">
       <table aria-label="Broker loan book">
-        <thead><tr><th>Borrower</th><th className="num">Principal</th><th className="num">Rate</th><th className="num">Payments left</th><th>Next due</th><th className="num">Total owed</th><th>Status</th><th aria-label="Actions" /></tr></thead>
+        <thead><tr><th>Borrower</th><th className="num">Principal</th><th className="num">Rate</th><th className="num">Payments left</th><th>Next due</th><th className="num">Total owed</th><th>Status</th><th>Alert</th><th aria-label="Actions" /></tr></thead>
         <tbody>
           {loans.map((loan) => {
             const permissions = loanPermissions(loan);
@@ -601,8 +648,9 @@ function LoansTable({ loans, selectedId, onSelect }: { loans: LoanView[]; select
                 <td className="num">{formatPercent(loan.rate)}</td>
                 <td className="num">{formatNumber(loan.paymentsRemaining)}</td>
                 <td className={permissions.overdueSeconds ? "due-overdue" : ""}><time dateTime={loan.nextDue}>{formatDate(loan.nextDue)}</time>{permissions.overdueSeconds ? <small>{formatOverdueDuration(permissions.overdueSeconds)}</small> : null}</td>
-                <td className="num">{formatMoney(loan.totalOwed)}</td>
+                <td className="num">{loan.totalOwed === null ? "—" : formatMoney(loan.totalOwed)}</td>
                 <td><StatusBadge value={loan.status} /></td>
+                <td>{alerts.some((alert) => alert.loanId === loan.id) ? <StatusBadge value="impaired" label="Payment alert" /> : "—"}</td>
                 <td className="row-action"><button type="button" onClick={() => onSelect(loan)}>Details</button></td>
               </tr>
             );
@@ -613,7 +661,7 @@ function LoansTable({ loans, selectedId, onSelect }: { loans: LoanView[]; select
   );
 }
 
-function LoanDetail({ loan, error, pendingAction, onAction, onBack }: { loan: LoanView; error: string | null; pendingAction: LoanAction | null; onAction: (action: LoanAction) => void; onBack: () => void }) {
+function LoanDetail({ loan, application, live, error, pendingAction, onAction, onBack }: { loan: LoanView; application: ApplicationView | null; live: boolean; error: string | null; pendingAction: LoanAction | null; onAction: (action: LoanAction) => void; onBack: () => void }) {
   const permissions = loanPermissions(loan);
   const [confirmingAction, setConfirmingAction] = useState<LoanAction | null>(null);
   const confirmation = confirmingAction ? loanActionCopy[confirmingAction] : null;
@@ -622,18 +670,28 @@ function LoanDetail({ loan, error, pendingAction, onAction, onBack }: { loan: Lo
     <aside className="detail-pane" aria-busy={pendingAction !== null} aria-label={`Loan ${loan.id}`}>
       <button className="mobile-back" type="button" onClick={onBack}>Back to loans</button>
       <div className="detail-heading"><div><span>{loan.id}</span><h2>{loan.persona}</h2></div><StatusBadge value={loan.status} /></div>
-      <dl className="detail-metrics"><div><dt>Principal</dt><dd className="num">{formatMoney(loan.principal)}</dd></div><div><dt>Owed</dt><dd className="num">{formatMoney(loan.totalOwed)}</dd></div><div><dt>Rate</dt><dd className="num">{formatPercent(loan.rate)}</dd></div></dl>
+      <dl className="detail-metrics"><div><dt>Principal</dt><dd className="num">{formatMoney(loan.principal)}</dd></div><div><dt>Owed</dt><dd className="num">{loan.totalOwed === null ? "—" : formatMoney(loan.totalOwed)}</dd></div><div><dt>Rate</dt><dd className="num">{formatPercent(loan.rate)}</dd></div></dl>
       <section className="detail-section">
         <h3>Payment state</h3>
-        {permissions.overdueSeconds ? <p className="overdue-copy">Payment is {formatOverdueDuration(permissions.overdueSeconds).toLowerCase()}. The {formatSeconds(loan.gracePeriodSeconds)} grace period has {permissions.canDefault ? "passed" : "not passed"}.</p> : <p>Next payment is due {formatDate(loan.nextDue)}.</p>}
+        {permissions.overdueSeconds ? <p className="overdue-copy">Payment is {formatOverdueDuration(permissions.overdueSeconds).toLowerCase()}. {loan.gracePeriodSeconds === null ? `The ledger reports that defaulting is ${permissions.canDefault ? "available" : "not available yet"}.` : `The ${formatSeconds(loan.gracePeriodSeconds)} grace period has ${permissions.canDefault ? "passed" : "not passed"}.`}</p> : <p>Next payment is due {formatDate(loan.nextDue)}.</p>}
+      </section>
+      <section className="detail-section receipt-section">
+        <h3>Linked application</h3>
+        <dl className="receipt-list">
+          <div><dt>Application ID</dt><dd><code>{loan.applicationId}</code></dd></div>
+          <div><dt>Score</dt><dd className="num">{application?.score ? formatNumber(application.score) : "—"}</dd></div>
+          <div><dt>Approved rate</dt><dd className="num">{application?.rate ? formatPercent(application.rate) : "—"}</dd></div>
+          <div><dt>Decision hash</dt><dd>{application?.decisionHash ? <><code title={application.decisionHash}>{shortId(application.decisionHash)}</code><CopyButton text={application.decisionHash} /></> : "—"}</dd></div>
+        </dl>
+        {!application ? <p>Application evidence will appear when the loans API returns an ID that matches the application queue.</p> : null}
       </section>
       <section className="detail-section">
         <h3>Ledger actions</h3>
         <div className="action-stack">
           <button className="button button--secondary" type="button" disabled={!permissions.canImpair || pendingAction !== null} title={permissions.canImpair ? "Mark the late loan as impaired" : "Available only after a payment is late"} onClick={() => setConfirmingAction("impair")}>Impair loan</button>
           <button className="button button--danger" type="button" disabled={!permissions.canDefault || pendingAction !== null} title={permissions.canDefault ? "Default after the grace period" : "Available after due date and grace period"} onClick={() => setConfirmingAction("default")}>Default loan</button>
-          <button className="button button--secondary" type="button" disabled={!permissions.canUnimpair || pendingAction !== null} title={permissions.canUnimpair ? "Return this loan to active status" : "Available only for impaired loans"} onClick={() => setConfirmingAction("unimpair")}>Remove impairment</button>
-          <button className="text-button" type="button" disabled={!permissions.canDelete || pendingAction !== null} title={permissions.canDelete ? "Delete this closed loan" : "Available only for paid or defaulted loans"} onClick={() => setConfirmingAction("delete")}>Delete closed loan</button>
+          <button className="button button--secondary" type="button" disabled={live || !permissions.canUnimpair || pendingAction !== null} title={live ? "The current API supports impair and default only" : permissions.canUnimpair ? "Return this loan to active status" : "Available only for impaired loans"} onClick={() => setConfirmingAction("unimpair")}>Remove impairment</button>
+          <button className="text-button" type="button" disabled={live || !permissions.canDelete || pendingAction !== null} title={live ? "The current API supports impair and default only" : permissions.canDelete ? "Delete this closed loan" : "Available only for paid or defaulted loans"} onClick={() => setConfirmingAction("delete")}>Delete closed loan</button>
         </div>
       </section>
       {error ? <div className="inline-error" role="alert">{error}</div> : null}
@@ -662,7 +720,8 @@ function LoanDetail({ loan, error, pendingAction, onAction, onBack }: { loan: Lo
   );
 }
 
-function LoansView({ loans, selected, error, pendingAction, receipt, onSelect, onAction, onClose }: { loans: LoanView[]; selected: LoanView | null; error: string | null; pendingAction: LoanAction | null; receipt: LoanActionReceipt | null; onSelect: (loan: LoanView) => void; onAction: (action: LoanAction) => void; onClose: () => void }) {
+function LoansView({ loans, applications, alerts, live, selected, error, pendingAction, receipt, onSelect, onAction, onClose }: { loans: LoanView[]; applications: ApplicationView[]; alerts: AlertView[]; live: boolean; selected: LoanView | null; error: string | null; pendingAction: LoanAction | null; receipt: LoanActionReceipt | null; onSelect: (loan: LoanView) => void; onAction: (action: LoanAction) => void; onClose: () => void }) {
+  const linkedApplication = selected ? applications.find((application) => application.id === selected.applicationId) ?? null : null;
   return (
     <div className="loans-view">
       {receipt ? (
@@ -672,8 +731,8 @@ function LoansView({ loans, selected, error, pendingAction, receipt, onSelect, o
         </div>
       ) : null}
       <div className={`split-view ${selected ? "split-view--detail" : ""}`}>
-        <Panel title="Loan book" action={<span className="queue-count">{formatNumber(loans.length)} loans</span>} className="list-pane"><LoansTable loans={loans} selectedId={selected?.id} onSelect={onSelect} /></Panel>
-        {selected ? <LoanDetail key={selected.id} loan={selected} error={error} pendingAction={pendingAction} onAction={onAction} onBack={onClose} /> : <aside className="detail-pane detail-pane--empty"><p>Select a loan to inspect its payment state and available ledger actions.</p></aside>}
+        <Panel title="Loan book" action={<span className="queue-count">{formatNumber(loans.length)} loans</span>} className="list-pane"><LoansTable loans={loans} alerts={alerts} selectedId={selected?.id} onSelect={onSelect} /></Panel>
+        {selected ? <LoanDetail key={selected.id} loan={selected} application={linkedApplication} live={live} error={error} pendingAction={pendingAction} onAction={onAction} onBack={onClose} /> : <aside className="detail-pane detail-pane--empty"><p>Select a loan to inspect its payment state and available ledger actions.</p></aside>}
       </div>
     </div>
   );
@@ -731,7 +790,7 @@ function AgentView({
       <section className="settings-row">
         <div className="settings-copy"><h2>Underwriting agent</h2><p>Pause automated scoring without changing broker approval controls.</p></div>
         <div className="settings-panel">
-          <div className="switch-row"><div><span>Agent status</span><StatusBadge value={agent.running ? "running" : "paused"} /><p>{live ? "Pause and resume are not in the shared API contract yet." : agent.running ? "New applications are scored as they arrive." : "Every application waits for a broker decision."}</p></div><button type="button" className={`switch ${agent.running ? "switch--on" : ""}`} role="switch" aria-label="Underwriting agent running" aria-checked={agent.running} disabled={live || pendingAction !== null} onClick={() => void onToggle()}><span /></button></div>
+          <div className="switch-row"><div><span>Agent status</span><StatusBadge value={agent.running ? "running" : "paused"} /><p>{agent.running ? "New applications are scored as they arrive." : "New applications are blocked until the agent resumes."}</p></div><button type="button" className={`switch ${agent.running ? "switch--on" : ""}`} role="switch" aria-label="Underwriting agent running" aria-checked={agent.running} disabled={pendingAction !== null} onClick={() => void onToggle()}><span /></button></div>
           <dl className="settings-values"><div><dt>Delegation</dt><dd>{agent.delegationActive ? "Active" : "Not active"}</dd></div><div><dt>Auto-approve</dt><dd>{agent.autoApprove ? "On" : "Off"}</dd></div><div><dt>Policy version</dt><dd>{agent.policyVersion}</dd></div></dl>
         </div>
       </section>
@@ -761,19 +820,22 @@ function AgentView({
 
 export function BrokerApp() {
   const previewFromUrl = new URLSearchParams(window.location.search).get("preview") === "1";
+  const startsWithSamples = sampleMode || previewFromUrl;
   const [brokerKey, setBrokerKey] = useState(() => sessionStorage.getItem("xrpl-broker-key") ?? "");
   const [preview, setPreview] = useState(previewFromUrl);
   const [tab, setTab] = useState<BrokerTab>("overview");
   const [menuOpen, setMenuOpen] = useState(false);
-  const [applications, setApplications] = useState(demoApplications);
-  const [loans, setLoans] = useState(demoLoans);
+  const [applications, setApplications] = useState(() => startsWithSamples ? demoApplications : []);
+  const [loans, setLoans] = useState(() => startsWithSamples ? demoLoans : []);
   const [snapshot, setSnapshot] = useState(demoSnapshot);
   const [agent, setAgent] = useState(demoAgent);
-  const [audit, setAudit] = useState(demoAudit);
+  const [audit, setAudit] = useState(() => startsWithSamples ? demoAudit : []);
   const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null);
   const [selectedLoanId, setSelectedLoanId] = useState<string | null>(null);
   const [reviewNote, setReviewNote] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
+  const [actionOpensAt, setActionOpensAt] = useState<string | null>(null);
+  const [applicationNotice, setApplicationNotice] = useState<{ id: string; message: string } | null>(null);
   const [pendingDecision, setPendingDecision] = useState<ApplicationDecision | null>(null);
   const [pendingLoanAction, setPendingLoanAction] = useState<LoanAction | null>(null);
   const [loanActionReceipt, setLoanActionReceipt] = useState<LoanActionReceipt | null>(null);
@@ -783,77 +845,101 @@ export function BrokerApp() {
   const [policyNotice, setPolicyNotice] = useState<string | null>(null);
   const [delegationNotice, setDelegationNotice] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [initializing, setInitializing] = useState(() => !sampleMode && Boolean(sessionStorage.getItem("xrpl-broker-key")));
+  const [initializing, setInitializing] = useState(() => !startsWithSamples && Boolean(sessionStorage.getItem("xrpl-broker-key")));
+  const [applicationsError, setApplicationsError] = useState<string | null>(null);
+  const [supportingDataAvailable, setSupportingDataAvailable] = useState(startsWithSamples);
+  const [supportingError, setSupportingError] = useState<string | null>(null);
   const [alertCheckedAt, setAlertCheckedAt] = useState(() => Date.now());
   const [alertError, setAlertError] = useState<string | null>(null);
-  const [alerts, setAlerts] = useState<AlertView[]>([{ loanId: "LN-2308", message: "Payment overdue" }]);
+  const [alerts, setAlerts] = useState<AlertView[]>(() => startsWithSamples ? [{ loanId: "LN-2308", message: "Payment overdue" }] : []);
 
   const selectedApplication = applications.find((application) => application.id === selectedApplicationId) ?? null;
   const selectedLoan = loans.find((loan) => loan.id === selectedLoanId) ?? null;
+  const selectedApplicationNotice = applicationNotice && applicationNotice.id === selectedApplication?.id ? applicationNotice.message : null;
   const pendingCount = applications.filter((application) => application.status === "pending_review").length;
+
+  const refreshApplications = useCallback(async () => {
+    if (sampleMode || preview || !brokerKey) return;
+    try {
+      setApiBrokerKey(brokerKey);
+      const nextApplications = await api.applications();
+      setApplications(nextApplications.map(applicationFromContract));
+      setApplicationsError(null);
+    } catch (error) {
+      setApplicationsError(error instanceof Error ? error.message : "Could not load applications.");
+    }
+  }, [brokerKey, preview]);
+
+  const refreshSupportingData = useCallback(async () => {
+    if (sampleMode || preview || !brokerKey) return;
+    try {
+      setApiBrokerKey(brokerKey);
+      const [broker, revenue, vault, nextLoans, nextAgent, nextAudit] = await Promise.all([
+        api.broker(),
+        api.revenue(),
+        api.vault(),
+        api.loans(),
+        api.agent(),
+        api.audit(),
+      ]);
+      setSnapshot(snapshotFromContract(broker, revenue, vault));
+      setLoans(nextLoans.map(loanFromContract));
+      setAgent(agentFromContract(nextAgent));
+      setAudit(nextAudit.map(auditFromContract));
+      setAlerts(alertsFromLoans(nextLoans));
+      setSupportingDataAvailable(true);
+      setSupportingError(null);
+      setAlertError(null);
+      setAlertCheckedAt(Date.now());
+    } catch {
+      setSupportingDataAvailable(false);
+      setSupportingError("The remaining broker endpoints are not connected yet. The application queue loads independently.");
+    }
+  }, [brokerKey, preview]);
 
   const refreshBrokerData = useCallback(async () => {
     if (sampleMode || preview || !brokerKey) {
       setInitializing(false);
       return;
     }
-
-    setApiBrokerKey(brokerKey);
-    const [broker, revenue, vault, nextApplications, nextLoans, nextAgent, nextAudit, nextAlerts] = await Promise.all([
-      api.broker(),
-      api.revenue(),
-      api.vault(),
-      api.applications(),
-      api.loans(),
-      api.agent(),
-      api.audit(),
-      api.alerts(),
-    ]);
-    setSnapshot(snapshotFromContract(broker, revenue, vault));
-    setApplications(nextApplications.map(applicationFromContract));
-    setLoans(nextLoans.map(loanFromContract));
-    setAgent(agentFromContract(nextAgent));
-    setAudit(nextAudit.map(auditFromContract));
-    setAlerts(nextAlerts.map(alertFromContract));
-    setAlertCheckedAt(Date.now());
-    setAlertError(null);
+    await Promise.all([refreshApplications(), refreshSupportingData()]);
     setInitializing(false);
-  }, [brokerKey, preview]);
+  }, [brokerKey, preview, refreshApplications, refreshSupportingData]);
 
-  const pollAlerts = useCallback(async () => {
+  const pollLoans = useCallback(async () => {
     setAlertCheckedAt(Date.now());
-    if (sampleMode || preview) {
+    if (sampleMode || preview || !supportingDataAvailable) {
       setAlertError(null);
       setInitializing(false);
       return;
     }
     try {
       setApiBrokerKey(brokerKey);
-      const result = await api.alerts();
-      setAlerts(result.map(alertFromContract));
+      const result = await api.loans();
+      setLoans(result.map(loanFromContract));
+      setAlerts(alertsFromLoans(result));
       setAlertError(null);
     } catch (error) {
-      setAlertError(error instanceof Error ? error.message : "Could not refresh alerts.");
+      setAlertError(error instanceof Error ? error.message : "Could not refresh loan alerts.");
     } finally {
       setInitializing(false);
     }
-  }, [brokerKey, preview]);
+  }, [brokerKey, preview, supportingDataAvailable]);
 
   useEffect(() => {
     if (!brokerKey && !preview) return;
 
     const initialPoll = window.setTimeout(() => {
-      void refreshBrokerData().catch((error: unknown) => {
-        setAlertError(error instanceof Error ? error.message : "Could not load broker data.");
-        setInitializing(false);
-      });
+      void refreshBrokerData();
     }, 0);
-    const interval = window.setInterval(() => void pollAlerts(), 10_000);
+    const interval = window.setInterval(() => void pollLoans(), 10_000);
+    const applicationInterval = window.setInterval(() => void refreshApplications(), 5_000);
     return () => {
       window.clearTimeout(initialPoll);
       window.clearInterval(interval);
+      window.clearInterval(applicationInterval);
     };
-  }, [brokerKey, pollAlerts, preview, refreshBrokerData]);
+  }, [brokerKey, pollLoans, preview, refreshApplications, refreshBrokerData]);
 
   const finding = useMemo(() => {
     if (alerts.length) return `${formatNumber(alerts.length)} overdue loan${alerts.length === 1 ? "" : "s"} need${alerts.length === 1 ? "s" : ""} attention.`;
@@ -869,6 +955,15 @@ export function BrokerApp() {
   }
 
   function openPreview() {
+    setApplications(demoApplications);
+    setLoans(demoLoans);
+    setSnapshot(demoSnapshot);
+    setAgent(demoAgent);
+    setAudit(demoAudit);
+    setAlerts([{ loanId: "LN-2308", message: "Payment overdue" }]);
+    setApplicationsError(null);
+    setSupportingError(null);
+    setSupportingDataAvailable(true);
     setInitializing(false);
     setPreview(true);
     window.history.replaceState(null, "", "/broker?preview=1");
@@ -878,18 +973,24 @@ export function BrokerApp() {
     setTab(next);
     setMenuOpen(false);
     setActionError(null);
+    setActionOpensAt(null);
+    setApplicationNotice(null);
   }
 
   function openApplication(application: ApplicationView) {
     setSelectedApplicationId(application.id);
     setReviewNote("");
     setActionError(null);
+    setActionOpensAt(null);
+    setApplicationNotice(null);
     setTab("applications");
   }
 
   function openLoan(loan: LoanView) {
     setSelectedLoanId(loan.id);
     setActionError(null);
+    setActionOpensAt(null);
+    setApplicationNotice(null);
     setTab("loans");
   }
 
@@ -910,22 +1011,29 @@ export function BrokerApp() {
     if (validationError) return setActionError(validationError);
 
     setActionError(null);
+    setActionOpensAt(null);
+    setApplicationNotice(null);
     setPendingDecision("approve");
     setApplications((current) => current.map((item) => item.id === application.id ? { ...item, status: "originating" } : item));
 
     try {
       await runAction(async () => {
         if (!sampleMode && !preview) {
-          await api.approve(Number(application.id));
-          await refreshBrokerData();
+          const updated = await api.approve(Number(application.id));
+          const view = applicationFromContract(updated);
+          setApplications((current) => current.map((item) => item.id === view.id ? view : item));
+          setApplicationNotice({ id: application.id, message: view.loanId ? `Loan ${shortId(view.loanId)} created on XRPL Devnet.` : "Approval recorded on XRPL Devnet." });
           return;
         }
-        setApplications((current) => current.map((item) => item.id === application.id ? { ...item, status: "approved" } : item));
+        setApplications((current) => current.map((item) => item.id === application.id ? { ...item, status: "active" } : item));
+        setApplicationNotice({ id: application.id, message: "Preview approval complete. No ledger transaction was submitted." });
         setAudit((current) => [{ id: `AUD-${Date.now()}`, at: new Date().toISOString(), actor: "broker", action: "Application approved", subject: application.id, reason: reviewNote || "Broker approved agent recommendation" }, ...current]);
       });
     } catch (error) {
       setApplications((current) => current.map((item) => item.id === application.id ? { ...item, status: "pending_review" } : item));
+      if (error instanceof ApiError && error.status === 409) setActionOpensAt(error.opensAt);
       setActionError(error instanceof Error ? error.message : "Could not approve this application.");
+      if (!sampleMode && !preview) await refreshApplications();
     } finally {
       setPendingDecision(null);
     }
@@ -939,20 +1047,24 @@ export function BrokerApp() {
     if (validationError) return setActionError(validationError);
 
     setActionError(null);
+    setActionOpensAt(null);
+    setApplicationNotice(null);
     setPendingDecision("reject");
 
     try {
       await runAction(async () => {
         if (!sampleMode && !preview) {
-          await api.reject(Number(application.id), note);
-          await refreshBrokerData();
+          const updated = await api.reject(Number(application.id), note);
+          const view = applicationFromContract(updated);
+          setApplications((current) => current.map((item) => item.id === view.id ? view : item));
           return;
         }
-        setApplications((current) => current.map((item) => item.id === application.id ? { ...item, status: "rejected" } : item));
+        setApplications((current) => current.map((item) => item.id === application.id ? { ...item, status: "rejected", brokerNote: note } : item));
         setAudit((current) => [{ id: `AUD-${Date.now()}`, at: new Date().toISOString(), actor: "broker", action: "Rejected application", subject: application.id, reason: note }, ...current]);
       });
     } catch (error) {
       setActionError(error instanceof Error ? error.message : "Could not reject this application.");
+      if (!sampleMode && !preview) await refreshApplications();
     } finally {
       setPendingDecision(null);
     }
@@ -1040,16 +1152,17 @@ export function BrokerApp() {
 
   async function toggleAgent() {
     if (pendingAgentAction) return;
-    if (!sampleMode && !preview) {
-      setActionError("Pause and resume are not part of the shared API contract yet.");
-      return;
-    }
     const running = !agent.running;
     setActionError(null);
     setPendingAgentAction("status");
 
     try {
-      await runAction(() => {
+      await runAction(async () => {
+        if (!sampleMode && !preview) {
+          const updated = await api.setAgentRunning(running);
+          setAgent(agentFromContract(updated));
+          return;
+        }
         const at = new Date().toISOString();
         setAgent((current) => ({ ...current, running }));
         setAudit((current) => [{
@@ -1149,28 +1262,32 @@ export function BrokerApp() {
             </button>
           ))}
         </nav>
-        <div className="sidebar-meta"><span className="signal-dot signal-dot--blue" />{preview || sampleMode ? "Sample XRP data" : "Live lending data"}<small>Alerts checked {formatDate(new Date(alertCheckedAt).toISOString())}</small></div>
+        <div className="sidebar-meta">
+          <span className="signal-dot signal-dot--blue" />
+          {preview || sampleMode ? "Sample XRP data" : applicationsError ? "Live data unavailable" : supportingDataAvailable ? "Live lending data" : "Live applications connected"}
+          <small>{supportingDataAvailable ? `Alerts checked ${formatDate(new Date(alertCheckedAt).toISOString())}` : "Remaining APIs pending"}</small>
+        </div>
       </aside>
       {menuOpen ? <button className="menu-scrim" type="button" aria-label="Close navigation" onClick={() => setMenuOpen(false)} /> : null}
       <main className="canvas">
         <header className="page-header">
           <div><h1>{tabs.find((item) => item.id === tab)?.label}</h1><p>{tab === "overview" ? finding : "Broker controls for the live XRPL lending flow."}</p></div>
-          <div className="freshness"><span>{refreshing ? "Updating…" : alertError ? "Needs attention" : "Up to date"}</span><button type="button" disabled={refreshing} onClick={() => void runAction(refreshBrokerData)}>Refresh</button></div>
+          <div className="freshness"><span>{refreshing ? "Updating…" : applicationsError || supportingError || alertError ? "Needs attention" : "Up to date"}</span><button type="button" disabled={refreshing} onClick={() => void runAction(refreshBrokerData)}>Refresh</button></div>
         </header>
         {initializing ? <BrokerSkeleton /> : (
           <>
-            {agent.running ? null : <div className="paused-banner">Agent paused: every application waits for you.</div>}
+            {supportingDataAvailable && !agent.running ? <div className="paused-banner">Agent paused: every application waits for you.</div> : null}
             <div hidden={tab !== "overview"}>
-              <Overview applications={applications} loans={loans} alerts={alerts} alertError={alertError} snapshot={snapshot} pendingCoverAction={pendingCoverAction} coverNotice={coverNotice} onApplication={openApplication} onLoan={openLoan} onNavigate={selectTab} onAdjustCover={adjustCover} onRefreshAlerts={() => void runAction(pollAlerts)} />
+              {supportingDataAvailable ? <Overview applications={applications} loans={loans} alerts={alerts} alertError={alertError} snapshot={snapshot} pendingCoverAction={pendingCoverAction} coverNotice={coverNotice} onApplication={openApplication} onLoan={openLoan} onNavigate={selectTab} onAdjustCover={adjustCover} onRefreshAlerts={() => void runAction(pollLoans)} /> : <LiveSectionUnavailable title="Live overview is not available yet" detail={supportingError ?? "The remaining broker APIs have not been connected."} onOpenApplications={() => selectTab("applications")} />}
             </div>
             <div hidden={tab !== "applications"}>
-              <ApplicationsView applications={applications} selected={selectedApplication} note={reviewNote} error={actionError} pendingDecision={pendingDecision} onSelect={openApplication} onNote={setReviewNote} onApprove={() => void approveApplication()} onReject={() => void rejectApplication()} onClose={() => setSelectedApplicationId(null)} />
+              <ApplicationsView applications={applications} selected={selectedApplication} note={reviewNote} error={actionError} notice={selectedApplicationNotice} opensAt={actionOpensAt} debtTotal={snapshot.debtTotal} coverRateMinimum={snapshot.coverRateMinimum} loadError={applicationsError} pendingDecision={pendingDecision} onSelect={openApplication} onNote={setReviewNote} onApprove={() => void approveApplication()} onReject={() => void rejectApplication()} onClose={() => setSelectedApplicationId(null)} onRetry={() => void runAction(refreshApplications)} />
             </div>
             <div hidden={tab !== "loans"}>
-              <LoansView loans={loans} selected={selectedLoan} error={actionError} pendingAction={pendingLoanAction} receipt={loanActionReceipt} onSelect={openLoan} onAction={(action) => void manageLoan(action)} onClose={() => setSelectedLoanId(null)} />
+              {supportingDataAvailable ? <LoansView loans={loans} applications={applications} alerts={alerts} live={!sampleMode && !preview} selected={selectedLoan} error={actionError} pendingAction={pendingLoanAction} receipt={loanActionReceipt} onSelect={openLoan} onAction={(action) => void manageLoan(action)} onClose={() => setSelectedLoanId(null)} /> : <LiveSectionUnavailable title="Live loans are not available yet" detail={supportingError ?? "The loans API has not been connected."} />}
             </div>
             <div hidden={tab !== "agent"}>
-              <AgentView agent={agent} audit={audit} live={!sampleMode && !preview} pendingAction={pendingAgentAction} policyNotice={policyNotice} delegationNotice={delegationNotice} error={actionError} onToggle={toggleAgent} onSavePolicy={saveAgentPolicy} onToggleDelegation={toggleDelegation} />
+              {supportingDataAvailable ? <AgentView agent={agent} audit={audit} live={!sampleMode && !preview} pendingAction={pendingAgentAction} policyNotice={policyNotice} delegationNotice={delegationNotice} error={actionError} onToggle={toggleAgent} onSavePolicy={saveAgentPolicy} onToggleDelegation={toggleDelegation} /> : <LiveSectionUnavailable title="Agent controls and audit are not available yet" detail={supportingError ?? "The agent and audit APIs have not been connected."} />}
             </div>
           </>
         )}

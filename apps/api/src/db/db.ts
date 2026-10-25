@@ -200,6 +200,18 @@ export function listAudit(db: Db, limit = 200): AuditEvent[] {
   }));
 }
 
+// ---------- credit pull cache ----------
+
+export function getCachedCredit(db: Db, address: string): { summary_json: string; pulled_at: string } | undefined {
+  return db.prepare("SELECT summary_json, pulled_at FROM credit_reports WHERE address = ?").get(address) as never;
+}
+
+export function saveCredit(db: Db, address: string, summaryJson: string, pulledAt: string): void {
+  db.prepare(`INSERT INTO credit_reports (address, summary_json, pulled_at) VALUES (?, ?, ?)
+              ON CONFLICT (address) DO UPDATE SET summary_json = excluded.summary_json, pulled_at = excluded.pulled_at`)
+    .run(address, summaryJson, pulledAt);
+}
+
 // ---------- config ----------
 
 export function getConfig(db: Db, key: string): string | undefined {
@@ -212,7 +224,8 @@ export function setConfig(db: Db, key: string, value: string): void {
 
 // ---------- demo reset (R12) ----------
 
-// Clears every table. The route guards this with the broker key and DEMO_MODE=true.
+// Clears every table except credit_reports, so a reset before a rehearsal does not spend real credit pulls again.
+// The route guards this with the broker key and DEMO_MODE=true.
 export function resetAll(db: Db): void {
   db.exec("DELETE FROM payments; DELETE FROM audit_events; DELETE FROM applications; DELETE FROM ban_list; DELETE FROM config; DELETE FROM sqlite_sequence;");
 }

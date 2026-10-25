@@ -3,7 +3,7 @@ import { CoverMove, platformFeeOn, type BrokerView, type RevenueView } from "@ha
 import { originationFee } from "@hack/ledger";
 import type { Deps } from "../app";
 import { audit, listApplications, listAudit, paymentTotals } from "../db/db";
-import { onLedger, requireBrokerKey, validate } from "../middleware";
+import { HttpError, onLedger, requireBrokerKey, validate } from "../middleware";
 
 export function brokerRouter({ db, ledger }: Deps) {
   const router = Router();
@@ -24,6 +24,15 @@ export function brokerRouter({ db, ledger }: Deps) {
   const cover = (kind: "deposit" | "withdraw") =>
     router.post(`/cover/${kind}`, validate({ body: CoverMove }), async (req, res) => {
       const { amount } = req.body as CoverMove;
+      if (kind === "withdraw") {
+        // The ledger refuses a withdrawal that leaves cover under the minimum share of debt; say so plainly instead of a 502.
+        const b = await onLedger(() => ledger.getBroker());
+        const required = (Number(b.debtTotal) * b.coverRateMinimum) / 100000;
+        const left = Number(b.coverAvailable) - Number(amount);
+        if (left < required) {
+          throw new HttpError(409, `Withdrawing ${amount} would leave ${Math.max(left, 0)} of cover, under the ${required} minimum for current debt`);
+        }
+      }
       const tx = await onLedger(() => (kind === "deposit" ? ledger.depositCover(amount) : ledger.withdrawCover(amount)));
       audit(db, { actor: "broker", action: kind === "deposit" ? "cover_deposit" : "cover_withdraw", tx, note: amount });
       res.json(tx);

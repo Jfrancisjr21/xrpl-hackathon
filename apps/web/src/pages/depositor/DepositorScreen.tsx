@@ -22,13 +22,15 @@ function useClock(running: boolean) {
 }
 
 export function DepositorScreen() {
-  const { wallet } = useWallet();
+  // The Lender tab always acts as the depositor, whatever borrower the header switcher has picked.
+  const { wallets } = useWallet();
+  const wallet = wallets.find((w) => w.role === "depositor") ?? null;
   const vault = usePoll<VaultView>(() => api.vault(wallet?.address), [wallet?.address]);
   const now = useClock(vault.data?.phase === "subscription");
 
   if (vault.loading && !vault.data) return <p className="hint">Loading the vault…</p>;
   if (!vault.data || !wallet) {
-    return <ErrorBanner error={vault.error ? `Couldn't load the vault. ${vault.error}` : "No wallet to act as yet."} onRetry={vault.refresh} />;
+    return <ErrorBanner error={vault.error ? `Couldn't load the vault. ${vault.error}` : "No depositor wallet yet."} onRetry={vault.refresh} />;
   }
   const v = vault.data;
 

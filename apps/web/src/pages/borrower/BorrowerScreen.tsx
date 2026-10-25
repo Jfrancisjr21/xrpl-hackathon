@@ -47,7 +47,7 @@ export function BorrowerScreen() {
           )}
           {latest && !loanClosed && <StatusTimeline app={latest} />}
           {latest && WAITING.includes(latest.status) && <p className="hint">Waiting for the broker… this updates on its own.</p>}
-          {latest && !loanClosed && <DecisionCard app={latest} assetLabel={assetLabel} />}
+          {latest && !loanClosed && <DecisionCard app={latest} assetLabel={assetLabel} onReapplied={refreshAll} />}
         </>
       )}
     </div>

@@ -1,6 +1,5 @@
 import type {
   AgentView as ContractAgent,
-  Alert,
   ApplicationView as ContractApplication,
   AuditEvent,
   BrokerView,
@@ -57,8 +56,8 @@ export function loanFromContract(loan: ContractLoan): LoanView {
     rate: rate(loan.interestRate),
     paymentsRemaining: loan.paymentsRemaining ?? 0,
     nextDue: loan.nextDueIso ?? "",
-    totalOwed: amount(loan.totalOwed),
-    gracePeriodSeconds: 0,
+    totalOwed: loan.totalOwed === null ? null : amount(loan.totalOwed),
+    gracePeriodSeconds: null,
     status: loan.status,
     canImpair: loan.canImpair,
     canDefault: loan.canDefault,
@@ -108,6 +107,8 @@ export function auditFromContract(event: AuditEvent): AuditEntry {
   };
 }
 
-export function alertFromContract(alert: Alert) {
-  return { loanId: alert.loanId, message: `Payment overdue since ${alert.nextDueIso}` };
+export function alertsFromLoans(loans: ContractLoan[]) {
+  return loans
+    .filter((loan) => loan.canImpair || loan.status === "impaired")
+    .map((loan) => ({ loanId: loan.loanId, message: "Payment overdue" }));
 }

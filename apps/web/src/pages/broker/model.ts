@@ -40,8 +40,8 @@ export interface LoanView {
   rate: number;
   paymentsRemaining: number;
   nextDue: string;
-  totalOwed: number;
-  gracePeriodSeconds: number;
+  totalOwed: number | null;
+  gracePeriodSeconds: number | null;
   status: LoanStatus;
   txHash?: string;
   canImpair?: boolean;
@@ -208,7 +208,7 @@ export function loanPermissions(loan: LoanView, now = Date.now()): LoanPermissio
     canImpair: loan.canImpair ?? (loan.status === "active" && isLate),
     canDefault: loan.canDefault ?? (
       (loan.status === "active" || loan.status === "impaired") &&
-      overdueSeconds >= loan.gracePeriodSeconds
+      loan.gracePeriodSeconds !== null && overdueSeconds >= loan.gracePeriodSeconds
     ),
     canUnimpair: loan.status === "impaired",
     canDelete: loan.status === "paid" || loan.status === "defaulted",

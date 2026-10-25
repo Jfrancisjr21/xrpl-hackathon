@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { samples } from "../../samples";
-import { applicationFromContract, loanFromContract } from "./contractAdapters";
+import { alertsFromLoans, applicationFromContract, loanFromContract } from "./contractAdapters";
 import { loanPermissions } from "./model";
 
 describe("broker contract adapters", () => {
@@ -36,5 +36,12 @@ describe("broker contract adapters", () => {
 
     expect(permissions.canImpair).toBe(false);
     expect(permissions.canDefault).toBe(false);
+  });
+
+  it("derives overdue alerts from the loan contract until the monitor endpoint ships", () => {
+    expect(alertsFromLoans([{ ...samples.loan, canImpair: true }])).toEqual([
+      { loanId: samples.loan.loanId, message: "Payment overdue" },
+    ]);
+    expect(alertsFromLoans([{ ...samples.loan, canImpair: false }])).toEqual([]);
   });
 });

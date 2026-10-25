@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { api } from "./lib/api";
 import { usePoll } from "./lib/hooks";
+import { ThemeToggle } from "./components/ThemeToggle";
 import { WalletProvider } from "./lib/wallet";
 import { ErrorBanner } from "./components/ErrorBanner";
 import { WalletSwitcher } from "./components/WalletSwitcher";
@@ -42,6 +43,7 @@ function UserApp() {
             {h ? `XRPL ${h.network ?? "Devnet"} · vault ${h.vaultPhase ?? "starting"}${h.mockMode ? " · mock ledger" : ""}`
               : health.loading ? "Connecting…" : "API offline"}
           </span>
+          <ThemeToggle />
         </header>
         {/* Both user tabs stay mounted so switching never loses typed text.
             The active wallet lives in WalletProvider and survives reloads too. */}

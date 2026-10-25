@@ -190,3 +190,96 @@
   .shell-net { width: 100%; padding-bottom: 10px; }
   .shell-tab { height: 48px; }
 }
+
+/* Cream Ledger theme (canvas Option 11), light and dark. useTheme() sets data-theme on <html> only while the
+   Lender/Borrower app is mounted, so the broker dashboard keeps app.css as it is. Light: cream paper, forest ink.
+   Dark: purple-black, lavender ink. Text is at least 4.5:1 on its ground in both. */
+:root[data-theme="light"] {
+  --ground: #f4efe3; --surface: #fbf8ef; --raised: #ede6d4; --border: #e2d9c4; --rule: #eae2cf; --control: #b9ae95;
+  --text: #1e2a22; --muted: #535d54; --accent: #1f4d36; --data: #1f4d36;
+  --positive: #1f6b43; --negative: #a33a25; --warning: #7a4d0a;
+  --pill-positive-bg: #dcebdd; --pill-positive-ink: #173826;
+  --pill-negative-bg: #f6ddd5; --pill-negative-ink: #7a2a1c;
+  --pill-warning-bg: #f6e7c8; --pill-warning-ink: #6b4508;
+  --pill-neutral-bg: #ede6d4; --pill-neutral-ink: #3f4a41;
+  --on-action: #f4efe3; --action-hover: #163828; --knob: #fbf8ef;
+  --danger-line: #e3b3a6; --warn-line: #e3cc96; --ok-line: #b5d2ba;
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  --ground: #16111f; --surface: #221a33; --raised: #2a2140; --border: #3a2f52; --rule: #2c2340; --control: #5f5080;
+  --text: #ece5d3; --muted: #b5adca; --accent: #c3a8f5; --data: #c3a8f5;
+  --positive: #8fd6a6; --negative: #f4a3a3; --warning: #f2d08f;
+  --pill-positive-bg: #1f3326; --pill-positive-ink: #b5ebc6;
+  --pill-negative-bg: #3d1c24; --pill-negative-ink: #f8c4cc;
+  --pill-warning-bg: #3a2c12; --pill-warning-ink: #f5dba6;
+  --pill-neutral-bg: #2a2140; --pill-neutral-ink: #ddd5ec;
+  --on-action: #24124a; --action-hover: #d3befa; --knob: #ece5d3;
+  --danger-line: #6b3340; --warn-line: #6a5426; --ok-line: #355c42;
+  color-scheme: dark;
+}
+/* The figure tiles take the ledger's own colours: forest, sage, parchment and margin red; lavender and plum at night. */
+:root[data-theme="light"] .screen {
+  --blue: #dfeadf; --blue-ink: #173826;
+  --teal: #e6ead6; --teal-ink: #36461c;
+  --amber: #f3e3c3; --amber-ink: #5f3d07;
+  --rose: #f3ddd6; --rose-ink: #7a2a1c;
+  --action: #1f4d36; --action-hover: #163828;
+}
+:root[data-theme="dark"] .screen {
+  --blue: #2e2452; --blue-ink: #dccbfb;
+  --teal: #3a2447; --teal-ink: #ecc9f2;
+  --amber: #3a2c17; --amber-ink: #f2d08f;
+  --rose: #3d1c2a; --rose-ink: #f4b4c6;
+  --action: #c3a8f5; --action-hover: #d3befa;
+}
+/* app.css never sets the page text colour, and hard-codes the colours below for its original white look.
+   Each one is re-pointed at the theme's tokens here, so app.css itself stays as Ilian wrote it. */
+:root[data-theme] body { color: var(--text); }
+:root[data-theme] .button--primary { background: var(--accent); color: var(--on-action); }
+:root[data-theme] .button--primary:hover:not(:disabled) { background: var(--action-hover); }
+:root[data-theme] .button--secondary { background: var(--surface); color: var(--text); }
+:root[data-theme] .button--secondary:hover { border-color: var(--muted); }
+:root[data-theme] .button--danger { color: var(--negative); background: var(--surface); border-color: var(--danger-line); }
+:root[data-theme] .button--danger:hover { background: var(--pill-negative-bg); }
+:root[data-theme] .text-button { text-decoration-color: var(--control); }
+:root[data-theme] .gate-panel input,
+:root[data-theme] .cover-dialog input,
+:root[data-theme] .policy-grid input,
+:root[data-theme] .verify-panel form input,
+:root[data-theme] .freshness button { background: var(--surface); color: var(--text); }
+:root[data-theme] .settings-panel { background: var(--surface); }
+
+/* Broker sidebar */
+:root[data-theme] .nav-item { color: var(--muted); }
+:root[data-theme] .nav-item--active { background: var(--raised); color: var(--text); }
+:root[data-theme] .nav-item b,
+:root[data-theme] .mobile-header span { background: var(--accent); color: var(--on-action); }
+
+/* Notices: warnings take the warning pill, errors the negative pill, success the positive one */
+:root[data-theme] .paused-banner,
+:root[data-theme] .decision-warning,
+:root[data-theme] .feature-notice { border-color: var(--warn-line); background: var(--pill-warning-bg); color: var(--pill-warning-ink); }
+:root[data-theme] .status--warning { border-color: var(--warn-line); }
+:root[data-theme] .alert-error,
+:root[data-theme] .revenue-warning,
+:root[data-theme] .block-error,
+:root[data-theme] .inline-error { border-color: var(--danger-line); background: var(--pill-negative-bg); color: var(--pill-negative-ink); }
+:root[data-theme] .action-success { border-color: var(--ok-line); background: var(--pill-positive-bg); color: var(--pill-positive-ink); }
+:root[data-theme] .action-progress { border-color: var(--border); background: var(--pill-neutral-bg); color: var(--pill-neutral-ink); }
+:root[data-theme] .overdue-copy { color: var(--negative) !important; }
+
+/* Bars, rows and the switch */
+:root[data-theme] .skeleton-bar,
+:root[data-theme] .skeleton-row,
+:root[data-theme] .cover-scale { background: var(--raised); }
+:root[data-theme] .alert-row { background: var(--raised); }
+:root[data-theme] .switch { background: var(--control); }
+:root[data-theme] .switch span { background: var(--knob); }
+:root[data-theme] .switch--on { background: var(--accent); }
+:root[data-theme="dark"] .switch--on span { background: var(--on-action); }
+
+.theme-toggle { gap: 6px; }
+/* The toggle sits beside the logo on the broker sign-in card, and beside Refresh on the broker dashboard. */
+.gate-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 64px; }
+.gate-panel .gate-top .product-lockup { margin-bottom: 0; }

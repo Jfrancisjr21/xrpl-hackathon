@@ -3,6 +3,7 @@ import type { FormEvent, ReactNode } from "react";
 import { CopyButton } from "../../components/CopyButton";
 import { Countdown } from "../../components/Countdown";
 import { StatusBadge } from "../../components/StatusBadge";
+import { ThemeToggle } from "../../components/ThemeToggle";
 import { ApiError, api, setBrokerKey as setApiBrokerKey } from "../../lib/api";
 import { usePoll, useTx } from "../../lib/hooks";
 import type { ScoreTokenView } from "@hack/shared";
@@ -80,9 +81,12 @@ function BrokerGate({ onUnlock, onPreview }: { onUnlock: (key: string) => void; 
   return (
     <main className="gate-shell">
       <section className="gate-panel" aria-labelledby="gate-title">
-        <div className="product-lockup">
-          <span className="product-mark" aria-hidden="true"><span /></span>
-          <span>Confiance</span>
+        <div className="gate-top">
+          <div className="product-lockup">
+            <span className="product-mark" aria-hidden="true"><span /></span>
+            <span>Confiance</span>
+          </div>
+          <ThemeToggle />
         </div>
         <h1 id="gate-title">Broker access</h1>
         <p>Review lending decisions and manage live Devnet loans from one controlled workspace.</p>
@@ -1354,7 +1358,7 @@ export function BrokerApp() {
       <main className="canvas">
         <header className="page-header">
           <div><h1>{tabs.find((item) => item.id === tab)?.label}</h1><p>{tab === "overview" ? finding : "Broker controls for the live XRPL lending flow."}</p></div>
-          <div className="freshness"><span>{refreshing ? "Updating…" : applicationsError || supportingError || alertError ? "Needs attention" : "Up to date"}</span><button type="button" disabled={refreshing} onClick={() => void runAction(refreshBrokerData)}>Refresh</button></div>
+          <div className="freshness"><span>{refreshing ? "Updating…" : applicationsError || supportingError || alertError ? "Needs attention" : "Up to date"}</span><button type="button" disabled={refreshing} onClick={() => void runAction(refreshBrokerData)}>Refresh</button><ThemeToggle /></div>
         </header>
         {initializing ? <BrokerSkeleton /> : (
           <>

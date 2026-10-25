@@ -12,6 +12,8 @@ export const demoSnapshot: BrokerSnapshot = {
   vaultPhase: "investment",
   interestCollected: 1_240,
   platformFee: 124,
+  serviceFees: 30,
+  originationFees: 45,
   projectedFee: 296,
   feeRate: 10,
   revenueSource: "measured",

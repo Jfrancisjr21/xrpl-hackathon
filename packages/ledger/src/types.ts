@@ -62,6 +62,26 @@ export interface FactsResult { facts: AccountFacts; featureSource: "ledger" | "d
 
 export interface DepositorPosition { address: string; deposited: string; sharePct: number }
 
+// Feature 5: what goes into a score passport, and what verify reads back.
+export interface ScoreTokenFields {
+  lcs: number;          // Ledger Credit Score, the final score
+  onChainScore: number; // the four wallet signals
+  level: "A" | "B" | "C";
+  kyc: boolean;
+  credit: boolean;
+  lending: boolean;
+  decisionHash: string;
+}
+export interface ScoreToken extends ScoreTokenFields {
+  nftId: string;
+  cid: string;          // the NFT's URI is ipfs://<cid>
+  issuer: string;
+  holder: string;       // the borrower once moved, else the issuer
+  issuedAt: string;     // ISO
+  expiresAt: string;    // ISO
+  expired: boolean;
+}
+
 export interface LedgerService {
   init(): Promise<void>;
   close(): Promise<void>;
@@ -81,4 +101,8 @@ export interface LedgerService {
   getLoan(loanId: string): Promise<LoanSnapshot>;
   setAgentDelegation(enabled: boolean): Promise<TxResult | null>;
   getAccountFacts(address: string): Promise<FactsResult>;
+  issueScoreToken(address: string, fields: ScoreTokenFields): Promise<{ nftId: string; cid: string; tx: TxResult; moveTx: TxResult | null }>;
+  getScoreToken(address: string): Promise<ScoreToken | null>;
+  getScoreRecord(cid: string): Promise<Buffer | null>; // the raw record file, for GET /api/passports/:cid
+  revokeScoreToken(address: string): Promise<TxResult | null>;
 }

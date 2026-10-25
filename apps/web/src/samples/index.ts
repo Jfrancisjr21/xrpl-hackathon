@@ -1,6 +1,6 @@
 import {
   AmountInput, ApplicationView, Decision, DemoWallet, LoanApplicationInput, LoanView, VaultView, estimateLoan,
-  type ApplicationStatus, type HealthResponse, type TxResult, type VaultPhase,
+  type ApplicationStatus, type HealthResponse, type TxResult, type VaultPhase, type VerifyResult,
 } from "@hack/shared";
 import { ApiError } from "../lib/apiError";
 import walletsJson from "./demo-wallets.json"; // not wallets.json: the repo gitignores that name (real seeds)
@@ -212,16 +212,25 @@ async function apply(body: LoanApplicationInput): Promise<ApplicationView> {
   return structuredClone(app);
 }
 
-// shortcut: a stand-in for GET /api/verify/:address (Feature 5) until Ralph's route and contract types merge.
-// Only Alice holds a score passport; every other wallet is not verified.
-export type VerifyResult =
-  | { address: string; verified: true; token: { score: number; level: "A" | "B" | "C"; issuedAt: string; kyc: boolean; credit: boolean; lending: boolean; txUrl?: string } }
-  | { address: string; verified: false; reason: "no_token" };
-
 function verify(address: string): VerifyResult {
   const role = wallets.find((w) => w.address === address)?.role;
   return role === "alice"
-    ? { address, verified: true, token: { score: 88, level: "A", issuedAt: iso(opened), kyc: true, credit: true, lending: true } }
+    ? {
+      address,
+      verified: true,
+      token: {
+        score: 88,
+        level: "A",
+        issuedAt: iso(opened),
+        expiresAt: iso(opened + 90 * 86_400_000),
+        kyc: true,
+        credit: true,
+        lending: true,
+        nftId: "E".repeat(64),
+        cid: "bafkreigh2akiscaildcqabsyg3dfr6chu3fgpregiymsck7e7aqa4s52zy",
+        holder: address,
+      },
+    }
     : { address, verified: false, reason: "no_token" };
 }
 

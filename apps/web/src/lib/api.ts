@@ -1,8 +1,9 @@
 import type {
   AgentDelegation, AgentPolicy, AgentView, ApplicationStatus, ApplicationView, AuditEvent, BrokerView, DecisionReceipt,
   DemoWallet, HealthResponse, LoanApplicationInput, LoanView, PayMode, PayResult, RevenueView, TxResult, VaultView,
+  VerifyResult,
 } from "@hack/shared";
-import { samples, type VerifyResult } from "../samples";
+import { samples } from "../samples";
 import { ApiError } from "./apiError";
 
 // The only file that calls fetch. Shapes come from the contract in @hack/shared.

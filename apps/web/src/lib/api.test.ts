@@ -40,6 +40,14 @@ describe("api", () => {
     expect(call(fetch, 0)[0]).toBe("/api/loans/ABC/pay");
     expect(JSON.parse(call(fetch, 0)[1].body as string)).toEqual({ mode: "payoff" });
   });
+
+  it("verifies a score passport through the public ledger route", async () => {
+    const fetch = reply(200, { address: "rAddress", verified: false, reason: "no_token" });
+    vi.stubGlobal("fetch", fetch);
+    await api.verify("rAddress");
+    expect(call(fetch, 0)[0]).toBe("/api/verify/rAddress");
+    expect((call(fetch, 0)[1].headers as Record<string, string>)["x-broker-key"]).toBeUndefined();
+  });
 });
 
 describe("format", () => {

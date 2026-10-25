@@ -353,6 +353,7 @@ function Overview({
   onNavigate,
   onAdjustCover,
   onRefreshAlerts,
+  preview,
 }: {
   applications: ApplicationView[];
   loans: LoanView[];
@@ -366,6 +367,7 @@ function Overview({
   onNavigate: (tab: BrokerTab) => void;
   onAdjustCover: (action: CoverAction, amount: number) => Promise<void>;
   onRefreshAlerts: () => void;
+  preview: boolean;
 }) {
   const pending = applications.filter((application) => application.status === "pending_review");
 
@@ -411,7 +413,7 @@ function Overview({
         <RevenuePanel snapshot={snapshot} />
       </div>
       <Panel title="Verify a wallet" action={<span className="panel-note">What another lender sees</span>}>
-        <VerifyPanel />
+        <VerifyPanel preview={preview} />
       </Panel>
     </>
   );
@@ -1295,7 +1297,7 @@ export function BrokerApp() {
           <>
             {supportingDataAvailable && !agent.running ? <div className="paused-banner">Agent paused: every application waits for you.</div> : null}
             <div hidden={tab !== "overview"}>
-              {supportingDataAvailable ? <Overview applications={applications} loans={loans} alerts={alerts} alertError={alertError} snapshot={snapshot} pendingCoverAction={pendingCoverAction} coverNotice={coverNotice} onApplication={openApplication} onLoan={openLoan} onNavigate={selectTab} onAdjustCover={adjustCover} onRefreshAlerts={() => void runAction(pollLoans)} /> : <LiveSectionUnavailable title="Live overview is not available yet" detail={supportingError ?? "The remaining broker APIs have not been connected."} onOpenApplications={() => selectTab("applications")} />}
+              {supportingDataAvailable ? <Overview applications={applications} loans={loans} alerts={alerts} alertError={alertError} snapshot={snapshot} pendingCoverAction={pendingCoverAction} coverNotice={coverNotice} onApplication={openApplication} onLoan={openLoan} onNavigate={selectTab} onAdjustCover={adjustCover} onRefreshAlerts={() => void runAction(pollLoans)} preview={sampleMode || preview} /> : <LiveSectionUnavailable title="Live overview is not available yet" detail={supportingError ?? "The remaining broker APIs have not been connected."} onOpenApplications={() => selectTab("applications")} />}
             </div>
             <div hidden={tab !== "applications"}>
               <ApplicationsView applications={applications} selected={selectedApplication} note={reviewNote} error={actionError} notice={selectedApplicationNotice} opensAt={actionOpensAt} debtTotal={snapshot.debtTotal} coverRateMinimum={snapshot.coverRateMinimum} loadError={applicationsError} pendingDecision={pendingDecision} onSelect={openApplication} onNote={setReviewNote} onApprove={() => void approveApplication()} onReject={() => void rejectApplication()} onClose={() => setSelectedApplicationId(null)} onRetry={() => void runAction(refreshApplications)} />

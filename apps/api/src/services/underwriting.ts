@@ -1,4 +1,7 @@
+import type { LedgerService } from "@hack/ledger";
+import { evaluate } from "@hack/risk";
 import type { Decision, LoanApplicationInput } from "@hack/shared";
+import type { PullCredit } from "./credit";
 
 // What the API knows from its own database: the ban list and the borrower's history with us.
 export interface UnderwriteContext {
@@ -10,25 +13,25 @@ export interface UnderwriteContext {
 // Turns an application into the agent's Decision. Routes depend on this signature, not on @hack/risk directly.
 export type Underwrite = (input: LoanApplicationInput, ctx: UnderwriteContext) => Promise<Decision>;
 
-const base = { sanctions: { blocked: false }, facts: null, featureSource: null, score: null, explanationSource: "template" as const };
-
-// shortcut: placeholder until risk/pipeline (evaluate) merges; it only applies the ban list, everything else goes to review unscored.
-// Replace with a function that calls @hack/risk evaluate() with ledger facts, credit pull and this context.
-export const placeholderUnderwrite: Underwrite = async (_input, ctx) =>
-  ctx.banned
-    ? {
-        ...base,
-        minScore: ctx.minScore,
-        approved: false,
-        interestRate: null,
-        reasons: ["Address is on the ban list after a defaulted loan with us"],
-        explanation: "This application was declined because a previous loan with us was defaulted.",
-      }
-    : {
-        ...base,
-        minScore: ctx.minScore,
-        approved: true,
-        interestRate: 10000, // placeholder 10% so approve can be tested end to end
-        reasons: ["Placeholder decision: the risk pipeline is not merged yet"],
-        explanation: "This application was not scored. The underwriting agent is not connected yet.",
-      };
+// The real underwriting agent: @hack/risk evaluate() fed with ledger facts, a credit pull and the vault's capacity.
+export function riskUnderwrite(ledger: LedgerService, pullCredit: PullCredit): Underwrite {
+  return async (input, ctx) => {
+    // R17: the borrower role is Mallory on every laptop, so her sanctions entry is built from the live wallet list.
+    const mallory = ledger.getWallets().find((w) => w.role === "borrower")?.address;
+    const [vault, broker] = await Promise.all([ledger.getVault(), ledger.getBroker()]);
+    return evaluate(input, {
+      banned: ctx.banned,
+      history: { loansPaidOff: ctx.loansPaidOff },
+      policy: { minScore: ctx.minScore },
+      sanctionsExtra: mallory ? { [mallory]: "Sanctions demo (borrower role)" } : {},
+      capacity: {
+        assetsAvailable: vault.assetsAvailable,
+        debtTotal: broker.debtTotal,
+        coverAvailable: broker.coverAvailable,
+        coverRateMinimum: broker.coverRateMinimum,
+      },
+      getFacts: (address) => ledger.getAccountFacts(address),
+      pullCredit,
+    });
+  };
+}

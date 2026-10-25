@@ -1,4 +1,4 @@
-export type ApplicationStatus = "pending_review" | "approved" | "rejected" | "originating";
+export type ApplicationStatus = "denied" | "pending_review" | "rejected" | "originating" | "active" | "failed";
 export type ApplicationFilter = "pending_review" | "all";
 export type ApplicationDecision = "approve" | "reject";
 export type LoanStatus = "active" | "impaired" | "paid" | "defaulted";
@@ -24,7 +24,11 @@ export interface ApplicationView {
   featureSource: string;
   sanctionsSources: string[];
   scoreParts: Array<{ label: string; points: number; note: string }>;
-  decisionMemoTx?: string;
+  decisionHash?: string;
+  loanId?: string;
+  txHash?: string;
+  brokerNote?: string;
+  error?: string;
 }
 
 export interface LoanView {
@@ -36,8 +40,8 @@ export interface LoanView {
   rate: number;
   paymentsRemaining: number;
   nextDue: string;
-  totalOwed: number;
-  gracePeriodSeconds: number;
+  totalOwed: number | null;
+  gracePeriodSeconds: number | null;
   status: LoanStatus;
   txHash?: string;
   canImpair?: boolean;
@@ -204,7 +208,7 @@ export function loanPermissions(loan: LoanView, now = Date.now()): LoanPermissio
     canImpair: loan.canImpair ?? (loan.status === "active" && isLate),
     canDefault: loan.canDefault ?? (
       (loan.status === "active" || loan.status === "impaired") &&
-      overdueSeconds >= loan.gracePeriodSeconds
+      loan.gracePeriodSeconds !== null && overdueSeconds >= loan.gracePeriodSeconds
     ),
     canUnimpair: loan.status === "impaired",
     canDelete: loan.status === "paid" || loan.status === "defaulted",

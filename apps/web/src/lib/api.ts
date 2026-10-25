@@ -1,5 +1,5 @@
 import type {
-  AgentDelegation, AgentPolicy, AgentView, Alert, ApplicationStatus, ApplicationView, AuditEvent, BrokerView,
+  AgentDelegation, AgentPolicy, AgentView, ApplicationStatus, ApplicationView, AuditEvent, BrokerView,
   DemoWallet, HealthResponse, LoanApplicationInput, LoanView, PayMode, PayResult, RevenueView, TxResult, VaultView,
 } from "@hack/shared";
 import { samples } from "../samples";
@@ -64,7 +64,7 @@ export const api = {
   reject: (id: number, note: string) => post<ApplicationView>(`/applications/${q(id)}/reject`, { note }),
   manageLoan: (loanId: string, action: "impair" | "unimpair" | "default" | "delete") => post<TxResult>(`/loans/${q(loanId)}/${action}`),
   agent: () => http<AgentView>("/agent"),
+  setAgentRunning: (running: boolean) => post<AgentView>(`/agent/${running ? "resume" : "pause"}`),
   setPolicy: (policy: AgentPolicy) => post<AgentView>("/agent/policy", policy),
   setDelegation: (body: AgentDelegation) => post<TxResult | null>("/agent/delegation", body),
-  alerts: () => http<Alert[]>("/alerts"),
 };

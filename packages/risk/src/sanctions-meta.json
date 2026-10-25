@@ -1,0 +1,6 @@
+{
+  "source": "OFAC SDN list (SDN.CSV + SDN_COMMENTS.CSV), sanctionslistservice.ofac.treas.gov",
+  "fetchedAt": "2026-10-24T19:25:31.105Z",
+  "entryCount": 19471,
+  "xrpAddressCount": 1
+}

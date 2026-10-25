@@ -4,7 +4,7 @@ import type { LedgerService, LoanSnapshot } from "@hack/ledger";
 import { LoanView, PayResult, VaultView, type Decision } from "@hack/shared";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "../app";
-import { placeholderUnderwrite } from "../services/underwriting";
+import { testUnderwrite } from "./test-underwrite";
 import { createApplication, isBanned, listAudit, listPayments, loansPaidOff, openDb, transition, type Db } from "../db/db";
 
 const KEY = "test-broker-key-123";
@@ -59,7 +59,7 @@ beforeEach(() => {
   db = openDb(":memory:");
   loan = snapshot();
   calls = [];
-  server = createApp({ db, ledger: fakeLedger, underwrite: placeholderUnderwrite }).listen(0);
+  server = createApp({ db, ledger: fakeLedger, underwrite: testUnderwrite }).listen(0);
   base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
 });
 afterEach(() => server.close());

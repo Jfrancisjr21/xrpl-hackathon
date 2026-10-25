@@ -7,6 +7,14 @@ export const STARTING_FUNDS: Partial<Record<Role, string>> = {
   broker: "5000", borrower: "2500", alice: "2500", bob: "2500", carol: "2500",
 };
 
+// The depositor issues the MPT, so a payment from it mints new TSTUSD. The holder must already be authorized.
+export function sendAsset(c: Client, issuer: Wallet, to: string, mptId: string, value: string) {
+  return submit(c, issuer, {
+    TransactionType: "Payment", Account: issuer.address,
+    Destination: to, Amount: { mpt_issuance_id: mptId, value },
+  });
+}
+
 // The depositor issues the MPT. Returns the MPT issuance ID.
 export async function createAsset(c: Client, w: Record<Role, Wallet>): Promise<string> {
   const issuer = w.depositor;
@@ -35,10 +43,7 @@ export async function createAsset(c: Client, w: Record<Role, Wallet>): Promise<s
   for (const [role, value] of Object.entries(STARTING_FUNDS) as [Role, string][]) {
     const who = w[role];
     await submit(c, who, { TransactionType: "MPTokenAuthorize", Account: who.address, MPTokenIssuanceID: mptId });
-    await submit(c, issuer, {
-      TransactionType: "Payment", Account: issuer.address,
-      Destination: who.address, Amount: { mpt_issuance_id: mptId, value },
-    });
+    await sendAsset(c, issuer, who.address, mptId, value);
   }
   return mptId;
 }

@@ -75,6 +75,14 @@ describe("broker", () => {
     expect((await call("/api/broker/cover/deposit", { method: "POST", body: { amount: "100" } })).body.result).toBe("tesSUCCESS");
     expect((await call("/api/broker/audit")).body[0]).toMatchObject({ actor: "broker", action: "cover_deposit", note: "100" });
   });
+
+  it("refuses with 409 a cover withdrawal that would leave less than 10% of debt", async () => {
+    broker = { debtTotal: "5000", coverAvailable: "1000" }; // minimum is 500
+    const r = await call("/api/broker/cover/withdraw", { method: "POST", body: { amount: "600" } });
+    expect(r.status).toBe(409);
+    expect(r.body.error).toMatch(/under the 500 minimum/);
+    expect((await call("/api/broker/cover/withdraw", { method: "POST", body: { amount: "500" } })).status).toBe(200);
+  });
 });
 
 describe("revenue (R10)", () => {

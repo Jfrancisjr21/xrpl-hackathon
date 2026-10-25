@@ -68,10 +68,17 @@ export function loanStatus(e: any): LoanStatus {
 export async function payLoan(c: Client, borrower: Wallet, loanId: string, mptId: string, mode: PayMode) {
   const [e, now] = await Promise.all([loanEntry(c, loanId), ledgerCloseTime(c)]);
   if (loanStatus(e) === "paid") throw new Error("Loan is already paid off");
-  const value = mode === "payoff" ? payoffAmount(e) : installmentAmount(e);
-  const late = mode === "installment" && now > e.NextPaymentDueDate;
-  // Payoff needs tfLoanFullPayment, or the ledger only takes one installment (confirmed on Devnet).
-  const flags = mode === "payoff" ? LoanPayFlags.tfLoanFullPayment : late ? LoanPayFlags.tfLoanLatePayment : 0;
+  const late = now > e.NextPaymentDueDate;
+  // Payoff needs tfLoanFullPayment, or the ledger only takes one installment (confirmed on Devnet). But with one
+  // payment left the ledger kills a full payment (tecKILLED, confirmed on Devnet): that last payment is a regular
+  // one, late-flagged if overdue, for whichever is larger of the installment and what is still owed.
+  const full = mode === "payoff" && Number(e.PaymentRemaining ?? 0) > 1;
+  // XLS-66: while a payment is overdue only the late installment is accepted; a full payment fails with tecEXPIRED.
+  if (full && late) throw new Error("A payment is overdue, so the loan cannot be paid off yet. Pay the amount due first");
+  const value = full ? payoffAmount(e) : mode === "payoff"
+    ? String(Math.max(Number(installmentAmount(e)), Number(payoffAmount(e))))
+    : installmentAmount(e);
+  const flags = full ? LoanPayFlags.tfLoanFullPayment : late ? LoanPayFlags.tfLoanLatePayment : 0;
   const tx = await submit(c, borrower, {
     TransactionType: "LoanPay", Account: borrower.address, LoanID: loanId,
     Amount: { mpt_issuance_id: mptId, value },

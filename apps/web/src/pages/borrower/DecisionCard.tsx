@@ -1,8 +1,11 @@
 import { estimateLoan, type ApplicationView } from "@hack/shared";
+import { api } from "../../lib/api";
+import { usePoll, useTx } from "../../lib/hooks";
 import { amount, pct } from "../../lib/format";
+import { ErrorBanner } from "../../components/ErrorBanner";
 import { StatusBadge } from "../../components/StatusBadge";
 import { CopyButton } from "../../components/CopyButton";
-import { verdictOf } from "./status";
+import { reapplyTerms, verdictOf } from "./status";
 
 // The server sets the payment interval; with DEMO_FAST_LOANS it is 60 seconds, so estimates use that.
 const DEMO_INTERVAL_SEC = 60;
@@ -15,8 +18,12 @@ const PARTS = [
 const badgeValue = { Approved: "approved", Denied: "rejected", Blocked: "flagged", "Secured offer": "review" } as const;
 
 /** What the agent decided and why: verdict, score, sanctions, rate, the loan's cost and the decision receipt. */
-export function DecisionCard({ app, assetLabel }: { app: ApplicationView; assetLabel: string }) {
+export function DecisionCard({ app, assetLabel, onReapplied }: { app: ApplicationView; assetLabel: string; onReapplied?: () => Promise<void> }) {
   const d = app.decision;
+  const retry = reapplyTerms(app, d);
+  const reapply = useTx<ApplicationView>();
+  // Feature 1: once the loan exists, check the stored decision against the hash in the LoanSet's memo on the ledger.
+  const receipt = usePoll(() => (app.tx ? api.receipt(app.id) : Promise.resolve(null)), [app.id, app.tx?.hash], 0);
   const verdict = verdictOf(d);
   const est = d.approved && d.interestRate !== null
     ? estimateLoan({ principal: app.amount, interestRate: d.interestRate, paymentTotal: app.paymentTotal, paymentIntervalSec: DEMO_INTERVAL_SEC })
@@ -78,6 +85,18 @@ export function DecisionCard({ app, assetLabel }: { app: ApplicationView; assetL
           Secured credit-builder loan: up to <b className="num">{amount(d.maxAmount)} {assetLabel}</b>, backed by <b className="num">{amount(d.collateralRequired)} {assetLabel}</b> of your own funds. Repaying it builds your history with us.
         </p>
       )}
+      {retry && (
+        <div className="reapply">
+          <p className="offer">
+            Level <b>{d.approvalLevel === "secured" ? "secured" : d.approvalLevel}</b> allows up to <b className="num">{amount(d.maxAmount)} {assetLabel}</b> over at most {d.maxPaymentTotal} payments, so these terms were too large.
+          </p>
+          <button type="button" className="button button--primary" disabled={reapply.pending}
+            onClick={() => void reapply.run(() => api.apply({ borrowerAddress: app.borrowerAddress, amount: retry.amount, paymentTotal: retry.paymentTotal, creditConsent: true }), onReapplied)}>
+            {reapply.pending ? "Scoring…" : `Reapply: ${amount(retry.amount)} ${assetLabel} over ${retry.paymentTotal} payments`}
+          </button>
+          <ErrorBanner error={reapply.error} />
+        </div>
+      )}
       {d.interestRate !== null && <p className="offer">Offered rate <b className="num">{pct(d.interestRate)}</b> a year</p>}
       <p className="explanation">{d.explanation}</p>
       {d.featureSource === "demo-profile" && <p className="hint">Seeded demo profile: these facts belong to a demo persona, not this wallet's ledger history.</p>}
@@ -101,6 +120,15 @@ export function DecisionCard({ app, assetLabel }: { app: ApplicationView; assetL
           Decision receipt <code title={app.decisionHash}>{app.decisionHash.slice(0, 12)}</code>
           <CopyButton text={app.decisionHash} />
           {app.tx?.explorerUrl && <a href={app.tx.explorerUrl} target="_blank" rel="noreferrer">Verify on the ledger</a>}
+        </p>
+      )}
+      {receipt.data && (
+        <p className={receipt.data.matches && receipt.data.memoMatches ? "hint" : "warn"} role="status">
+          {receipt.data.matches && receipt.data.memoMatches
+            ? "✓ Checked: this decision's hash matches the memo on the loan's ledger transaction."
+            : !receipt.data.matches
+              ? "The stored decision no longer matches its receipt hash."
+              : "The loan's ledger memo does not match this decision's receipt."}
         </p>
       )}
     </section>

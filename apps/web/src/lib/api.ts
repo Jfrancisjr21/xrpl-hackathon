@@ -75,4 +75,6 @@ export const api = {
   scoreToken: (address: string) =>
     read<ScoreTokenView>(`/score-tokens/${q(address)}`, () => ({ address, status: null, applicationId: null, onLedger: null })),
   resetDemo: () => http<{ ok: true }>("/demo/reset", { method: "DELETE" }),
+  // Feature 5, broker: issue (or with replace, burn and reissue) the passport for an application's active loan. 10 to 15 s.
+  issueScoreToken: (applicationId: number, replace = false) => post<ScoreTokenView>("/score-tokens", { applicationId, replace }),
 };

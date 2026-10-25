@@ -5,6 +5,8 @@ import { Countdown } from "../../components/Countdown";
 import { StatusBadge } from "../../components/StatusBadge";
 import { ThemeToggle } from "../../components/ThemeToggle";
 import { ApiError, api, setBrokerKey as setApiBrokerKey } from "../../lib/api";
+import { usePoll, useTx } from "../../lib/hooks";
+import type { ScoreTokenView } from "@hack/shared";
 import {
   agentFromContract,
   alertsFromLoans,
@@ -82,7 +84,7 @@ function BrokerGate({ onUnlock, onPreview }: { onUnlock: (key: string) => void; 
         <div className="gate-top">
           <div className="product-lockup">
             <span className="product-mark" aria-hidden="true"><span /></span>
-            <span>XRPL Lending</span>
+            <span>Confiance</span>
           </div>
           <ThemeToggle />
         </div>
@@ -501,7 +503,7 @@ function ApplicationDetail({
       <section className="detail-section">
         <h3>Score evidence</h3>
         {application.scoreParts.length ? (
-          <div className="score-parts">
+          <div className="broker-score-parts">
             {application.scoreParts.map((part) => (
               <div key={part.label}><span><strong>{part.label}</strong><small>{part.note}</small></span><b className="num">+{formatNumber(part.points)}</b></div>
             ))}
@@ -687,7 +689,37 @@ function LoansTable({ loans, alerts, selectedId, onSelect }: { loans: LoanView[]
   );
 }
 
-function LoanDetail({ loan, application, error, pendingAction, onAction, onBack }: { loan: LoanView; application: ApplicationView | null; live: boolean; error: string | null; pendingAction: LoanAction | null; onAction: (action: LoanAction) => void; onBack: () => void }) {
+/** Feature 5 fallback for the demo: the borrower's passport state, and a button to issue or reissue it by hand. */
+function PassportSection({ loan }: { loan: LoanView }) {
+  const record = usePoll(() => api.scoreToken(loan.borrower), [loan.borrower], 10_000);
+  const issue = useTx<ScoreTokenView>();
+  const status = record.data?.status ?? null;
+  const token = record.data?.onLedger ?? null;
+  const held = status === "held" || status === "minted";
+  const open = loan.status === "active" || loan.status === "impaired";
+  const state = token
+    ? `On the ledger: ${token.lcs} LCS, level ${token.level}${token.expired ? ", expired" : ""}. ${token.holder === loan.borrower ? "Held by the borrower" : "Still on the issuer"}.`
+    : status === "pending" ? "Minting in the background (10 to 15 seconds)…"
+    : status === "failed" ? `Last attempt failed: ${record.data?.error ?? "unknown error"}`
+    : status === "revoked" ? "Revoked."
+    : "Not issued yet.";
+  return (
+    <section className="detail-section">
+      <h3>Score passport</h3>
+      <p>{state}</p>
+      <div className="action-stack">
+        <button className="button button--secondary" type="button" disabled={!open || issue.pending || status === "pending"}
+          title={open ? "Mint the borrower's score passport on the ledger" : "Only an open loan gets a passport"}
+          onClick={() => void issue.run(() => api.issueScoreToken(Number(loan.applicationId), held), record.refresh)}>
+          {issue.pending ? "Minting on Devnet…" : held ? "Reissue passport" : "Issue passport"}
+        </button>
+      </div>
+      {issue.error ? <div className="inline-error" role="alert">{issue.error}</div> : null}
+    </section>
+  );
+}
+
+function LoanDetail({ loan, application, live, error, pendingAction, onAction, onBack }: { loan: LoanView; application: ApplicationView | null; live: boolean; error: string | null; pendingAction: LoanAction | null; onAction: (action: LoanAction) => void; onBack: () => void }) {
   const permissions = loanPermissions(loan);
   const [confirmingAction, setConfirmingAction] = useState<LoanAction | null>(null);
   const confirmation = confirmingAction ? loanActionCopy[confirmingAction] : null;
@@ -722,6 +754,7 @@ function LoanDetail({ loan, application, error, pendingAction, onAction, onBack 
       </section>
       {error ? <div className="inline-error" role="alert">{error}</div> : null}
       {pendingAction ? <div className="action-progress" role="status" aria-live="polite">Submitting {loanActionCopy[pendingAction].label.toLowerCase()}…</div> : null}
+      {live ? <PassportSection loan={loan} /> : null}
       <section className="detail-section receipt-section"><h3>Origination transaction</h3>{loan.txHash ? <a href={explorerUrl(loan.txHash)} target="_blank" rel="noreferrer">Open on XRPL Explorer</a> : <p>Transaction hash unavailable in sample contract data.</p>}</section>
       {confirmingAction && confirmation && !pendingAction ? (
         <div className="dialog-scrim" onMouseDown={(event) => event.target === event.currentTarget && setConfirmingAction(null)}>
@@ -1303,10 +1336,10 @@ export function BrokerApp() {
 
   return (
     <div className="app-shell">
-      <header className="mobile-header"><button type="button" onClick={() => setMenuOpen(true)}>Menu</button><strong>XRPL Lending</strong><span>{formatNumber(pendingCount)}</span></header>
+      <header className="mobile-header"><button type="button" onClick={() => setMenuOpen(true)}>Menu</button><strong>Confiance</strong><span>{formatNumber(pendingCount)}</span></header>
       <aside className={`sidebar ${menuOpen ? "sidebar--open" : ""}`}>
         <button className="sidebar-close" type="button" onClick={() => setMenuOpen(false)}>Close</button>
-        <div className="product-lockup"><span className="product-mark" aria-hidden="true"><span /></span><span>XRPL Lending</span></div>
+        <div className="product-lockup"><span className="product-mark" aria-hidden="true"><span /></span><span>Confiance</span></div>
         <div className="workspace-label"><span>Broker workspace</span><strong>Devnet operations</strong></div>
         <nav aria-label="Broker navigation">
           {tabs.map((item) => (

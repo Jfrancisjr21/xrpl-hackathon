@@ -40,3 +40,13 @@ export function timelineOf(app: ApplicationView): { states: StepState[]; note: s
 /** The application that matters: the newest one (highest id). */
 export const latestOf = (apps: ApplicationView[] | null) =>
   (apps ?? []).reduce<ApplicationView | null>((latest, a) => (!latest || a.id > latest.id ? a : latest), null);
+
+/** Terms that fit the level, when a denial is only about the amount or the number of payments; else null. */
+export function reapplyTerms(app: Pick<ApplicationView, "amount" | "paymentTotal">, d: Decision): { amount: string; paymentTotal: number } | null {
+  if (d.outcome !== "denied" || !d.approvalLevel || d.maxAmount == null || d.maxPaymentTotal == null) return null;
+  const maxPayments = d.maxPaymentTotal;
+  const maxAmount = Math.floor(Number(d.maxAmount));
+  if (maxAmount < 1) return null; // the vault cannot fund anything right now
+  if (app.paymentTotal <= maxPayments && Number(app.amount) <= maxAmount) return null; // denied for another reason
+  return { amount: String(Math.min(Number(app.amount), maxAmount)), paymentTotal: Math.min(app.paymentTotal, maxPayments) };
+}

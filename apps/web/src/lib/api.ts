@@ -2,7 +2,7 @@ import type {
   AgentDelegation, AgentPolicy, AgentView, ApplicationStatus, ApplicationView, AuditEvent, BrokerView,
   DemoWallet, HealthResponse, LoanApplicationInput, LoanView, PayMode, PayResult, RevenueView, TxResult, VaultView,
 } from "@hack/shared";
-import { samples } from "../samples";
+import { samples, type VerifyResult } from "../samples";
 import { ApiError } from "./apiError";
 
 // The only file that calls fetch. Shapes come from the contract in @hack/shared.
@@ -67,4 +67,6 @@ export const api = {
   setAgentRunning: (running: boolean) => post<AgentView>(`/agent/${running ? "resume" : "pause"}`),
   setPolicy: (policy: AgentPolicy) => post<AgentView>("/agent/policy", policy),
   setDelegation: (body: AgentDelegation) => post<TxResult | null>("/agent/delegation", body),
+  // Feature 5: public score-passport check, no key needed
+  verify: (address: string) => read<VerifyResult>(`/verify/${q(address)}`, () => samples.verify(address)),
 };

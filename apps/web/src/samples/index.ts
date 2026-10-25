@@ -212,8 +212,22 @@ async function apply(body: LoanApplicationInput): Promise<ApplicationView> {
   return structuredClone(app);
 }
 
+// shortcut: a stand-in for GET /api/verify/:address (Feature 5) until Ralph's route and contract types merge.
+// Only Alice holds a score passport; every other wallet is not verified.
+export type VerifyResult =
+  | { address: string; verified: true; token: { score: number; level: "A" | "B" | "C"; issuedAt: string; kyc: boolean; credit: boolean; lending: boolean; txUrl?: string } }
+  | { address: string; verified: false; reason: "no_token" };
+
+function verify(address: string): VerifyResult {
+  const role = wallets.find((w) => w.address === address)?.role;
+  return role === "alice"
+    ? { address, verified: true, token: { score: 88, level: "A", issuedAt: iso(opened), kyc: true, credit: true, lending: true } }
+    : { address, verified: false, reason: "no_token" };
+}
+
 export const samples = {
   health: (): HealthResponse => ({ ok: true, mockMode: true, network: "devnet", vaultPhase: phaseAt() }),
+  verify,
   wallets,
   vault,
   applicationApproved,

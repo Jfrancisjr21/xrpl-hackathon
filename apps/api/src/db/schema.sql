@@ -59,6 +59,14 @@ CREATE TABLE IF NOT EXISTS ban_list (
   created_at TEXT NOT NULL
 );
 
+-- Recent credit pulls (summary only: scores and reason codes), reused for 24 h so repeat applications
+-- and restarts do not spend the bureau's limited pulls.
+CREATE TABLE IF NOT EXISTS credit_reports (
+  address      TEXT PRIMARY KEY,
+  summary_json TEXT NOT NULL,
+  pulled_at    TEXT NOT NULL
+);
+
 -- Small settings the broker changes from the dashboard: agent paused, minimum score.
 CREATE TABLE IF NOT EXISTS config (
   key   TEXT PRIMARY KEY,

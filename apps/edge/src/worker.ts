@@ -62,16 +62,19 @@ export class Confiance extends DurableObject<Env> {
   async alarm() {
     await this.ledger.recover();
     await this.ledger.bootstrap();
-    this.started = undefined;
   }
 
+  // Runs once per object: the port can only be bound one time. A failed start is not kept, so the next request retries.
   private start() {
     return (this.started ??= (async () => {
       await this.ledger.init();
       const underwrite = riskUnderwrite(this.ledger, demoBureau(this.ledger.getWallets()));
       const app = createApp({ db: this.db, ledger: this.ledger, underwrite, alerts: this.monitor.alerts });
       await new Promise<void>((listening) => { app.listen(PORT, () => listening()); });
-    })());
+    })().catch((e) => {
+      this.started = undefined;
+      throw e;
+    }));
   }
 
   // Replaces the timers from the Node entry point.

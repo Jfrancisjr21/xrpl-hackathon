@@ -6,6 +6,7 @@
   "compatibility_date": "2026-10-01",
   "compatibility_flags": ["nodejs_compat"],
   "routes": [{ "pattern": "confiance.alcoberlabs.xyz", "custom_domain": true }],
+  "workers_dev": true,
   "assets": {
     "directory": "../web/dist",
     "not_found_handling": "single-page-application",

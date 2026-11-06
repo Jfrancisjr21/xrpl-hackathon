@@ -1,3 +1,4 @@
+import { createServer, type RequestListener } from "node:http";
 import { DurableObject } from "cloudflare:workers";
 import { handleAsNodeRequest } from "cloudflare:node";
 import { disconnect, readState, useBlobStore, XrplLedger, type RecordStore } from "@hack/ledger";
@@ -19,6 +20,11 @@ const SECOND = 1000, MINUTE = 60 * SECOND;
 const ALERT_CHECK_MS = 10 * SECOND, VAULT_CHECK_MS = 5 * MINUTE, LEDGER_IDLE_MS = MINUTE;
 
 const json = (body: unknown, status = 200) => Response.json(body, { status });
+
+// The port belongs to the isolate and can only be bound once, but the Durable Object can be rebuilt inside the same
+// isolate. So the server is created here and each new object just points it at its own Express app.
+let handle: RequestListener = (_req, res) => { res.statusCode = 503; res.end(); };
+createServer((req, res) => handle(req, res)).listen(PORT);
 
 // Everything stateful lives in this one object, so it behaves like the single Node process the API was written for:
 // a synchronous SQLite database, and one queue of ledger writes. It has no always-on loop, so jobs that ran on
@@ -64,13 +70,12 @@ export class Confiance extends DurableObject<Env> {
     await this.ledger.bootstrap();
   }
 
-  // Runs once per object: the port can only be bound one time. A failed start is not kept, so the next request retries.
+  // Runs once per object. A failed start is not kept, so the next request retries.
   private start() {
     return (this.started ??= (async () => {
       await this.ledger.init();
       const underwrite = riskUnderwrite(this.ledger, demoBureau(this.ledger.getWallets()));
-      const app = createApp({ db: this.db, ledger: this.ledger, underwrite, alerts: this.monitor.alerts });
-      await new Promise<void>((listening) => { app.listen(PORT, () => listening()); });
+      handle = createApp({ db: this.db, ledger: this.ledger, underwrite, alerts: this.monitor.alerts });
     })().catch((e) => {
       this.started = undefined;
       throw e;

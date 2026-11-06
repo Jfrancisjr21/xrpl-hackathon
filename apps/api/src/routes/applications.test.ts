@@ -3,7 +3,8 @@ import type { Server } from "node:http";
 import { ApplicationView, DemoWallet, ErrorResponse, HealthResponse, type Decision } from "@hack/shared";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "../app";
-import { openDb, setConfig, type Db } from "../db/db";
+import { setConfig, type Db } from "../db/db";
+import { openDb } from "../db/open";
 import { LedgerNotReadyError, type LedgerService, type LoanTerms } from "@hack/ledger";
 import type { Underwrite } from "../services/underwriting";
 

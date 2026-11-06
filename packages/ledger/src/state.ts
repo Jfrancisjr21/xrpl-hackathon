@@ -1,5 +1,4 @@
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-
+import { blobs } from "./store";
 
 export interface LedgerState {
     domainId?: string;
@@ -11,20 +10,27 @@ export interface LedgerState {
 }
 
 const file = () => process.env.STATE_FILE ?? "state.json";
+const write = (s: LedgerState) => blobs().write(file(), JSON.stringify(s, null, 2) + "\n");
 
 export function readState(): LedgerState {
-  return existsSync(file()) ? JSON.parse(readFileSync(file(), "utf8")) : {};
+  const text = blobs().read(file());
+  return text ? JSON.parse(text) : {};
 }
 
 export function saveState(patch: Partial<LedgerState>): LedgerState {
   const next = { ...readState(), ...patch };
-  writeFileSync(file(), JSON.stringify(next, null, 2) + "\n");
+  write(next);
   return next;
 }
 
 // Forget the vault and broker so the next bootstrap creates fresh ones. The domain and asset are kept.
 export function clearVault(): LedgerState {
   const { domainId, mptId } = readState();
-  writeFileSync(file(), JSON.stringify({ domainId, mptId }, null, 2) + "\n");
+  write({ domainId, mptId });
   return { domainId, mptId };
+}
+
+// After a Devnet reset none of these IDs exist any more.
+export function clearState() {
+  write({});
 }

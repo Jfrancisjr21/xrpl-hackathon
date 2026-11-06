@@ -18,6 +18,9 @@
   background: var(--surface); color: var(--text); font: inherit; font-size: 13px;
 }
 .shell-main { max-width: 1100px; margin: 0 auto; padding: 32px 24px 64px; }
+.shell-tab { display: inline-flex; align-items: center; text-decoration: none; }
+.demo-guide { max-width: 1100px; margin: 20px auto 0; padding: 0 24px; color: var(--muted); font-size: 14px; line-height: 1.5; }
+.demo-guide a { color: var(--text); }
 
 /* Pastel consumer (taste skill): each figure sits on a pale tile of its own hue with the dark of that hue as
    ink, under one large radius. Scoped to .screen, so Ilian's broker workspace keeps app.css as it is.

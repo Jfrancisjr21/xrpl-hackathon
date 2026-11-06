@@ -1,0 +1,25 @@
+{
+  "name": "@hack/edge",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@hack/ledger": "workspace:*",
+    "@hack/risk": "workspace:*",
+    "@hack/shared": "workspace:*",
+    "cors": "^2.8.6",
+    "express": "^5.3.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260101.0",
+    "@types/node": "^24.19.2",
+    "typescript": "~6.0.3",
+    "wrangler": "^4.158.0"
+  }
+}

@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { XrplLedger } from "@hack/ledger";
 import { createApp } from "./app";
-import { openDb } from "./db/db";
+import { openDb } from "./db/open";
 import { cachedWithFallback, demoBureau } from "./services/credit";
 import { isoftpullBureau } from "./services/isoftpull";
 import { createMonitor } from "./services/monitor";

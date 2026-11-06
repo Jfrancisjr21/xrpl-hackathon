@@ -16,13 +16,15 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "borrower", label: "Borrower" },
 ];
 
+const isHostedDemo = Boolean(import.meta.env.VITE_DEMO_BROKER_KEY);
+
 export function App() {
   if (window.location.pathname.startsWith("/broker")) return <BrokerApp />;
   return <UserApp />;
 }
 
 function UserApp() {
-  const [tab, setTab] = useState<Tab>("depositor");
+  const [tab, setTab] = useState<Tab>(isHostedDemo ? "borrower" : "depositor");
   const wallets = usePoll(api.wallets, [], 0);
   const health = usePoll(api.health, [], 10_000);
   const h = health.data;
@@ -38,6 +40,7 @@ function UserApp() {
                 {t.label}
               </button>
             ))}
+            {isHostedDemo && <a className="shell-tab" href="/broker">Broker</a>}
           </nav>
           {tab === "borrower" && <WalletSwitcher />}
           <span className="shell-net" role="status">
@@ -49,6 +52,12 @@ function UserApp() {
         {/* Both user tabs stay mounted so switching never loses typed text.
             The active wallet lives in WalletProvider and survives reloads too. */}
         <main>
+          {isHostedDemo && (
+            <p className="demo-guide">
+              <strong>Try it:</strong> pick Alice and apply for a loan, approve it in <a href="/broker">Broker</a>, then come back and repay it.
+              Real XRPL Devnet transactions, test money only. Data resets after 30 idle minutes.
+            </p>
+          )}
           <section className="shell-main" hidden={tab !== "depositor"}>
             <ErrorBanner error={wallets.error && `Couldn't load the demo wallets. ${wallets.error}`} onRetry={wallets.refresh} />
             <DepositorScreen />

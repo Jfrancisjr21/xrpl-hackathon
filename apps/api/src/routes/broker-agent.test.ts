@@ -4,7 +4,8 @@ import type { LedgerService, LoanSnapshot } from "@hack/ledger";
 import { AgentView, BrokerView, RevenueView, type Decision } from "@hack/shared";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "../app";
-import { createApplication, listApplications, listPayments, openDb, transition, type Db } from "../db/db";
+import { createApplication, listApplications, listPayments, transition, type Db } from "../db/db";
+import { openDb } from "../db/open";
 import { testUnderwrite } from "./test-underwrite";
 
 const KEY = "test-broker-key-123";

@@ -1,6 +1,7 @@
 import { CreditSummary } from "@hack/shared";
 import { beforeEach, describe, expect, it } from "vitest";
-import { openDb, type Db } from "../db/db";
+import { type Db } from "../db/db";
+import { openDb } from "../db/open";
 import { cachedWithFallback, demoBureau, type PullCredit } from "./credit";
 import { isoftpullBureau, summarize } from "./isoftpull";
 

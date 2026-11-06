@@ -4,7 +4,8 @@ import type { LedgerService, ScoreToken, ScoreTokenFields } from "@hack/ledger";
 import { ScoreTokenView, VerifyResult, type Decision } from "@hack/shared";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "../app";
-import { createApplication, latestScoreToken, listAudit, openDb, transition, type Db } from "../db/db";
+import { createApplication, latestScoreToken, listAudit, transition, type Db } from "../db/db";
+import { openDb } from "../db/open";
 import { issuePassport } from "../services/passport";
 import { testUnderwrite } from "./test-underwrite";
 

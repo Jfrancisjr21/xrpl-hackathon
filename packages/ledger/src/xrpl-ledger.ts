@@ -1,7 +1,7 @@
 import { rippleTimeToUnixTime, type Client, type Wallet } from "xrpl";
 import { connect, disconnect, explorerUrl, ledgerCloseTime } from "./client";
-import { loadWallets } from "./wallets";
-import { readState, saveState, type LedgerState } from "./state";
+import { accountExists, fundMissingWallets, loadWallets } from "./wallets";
+import { clearState, clearVault, readState, saveState, type LedgerState } from "./state";
 import { setupAccess } from "./access";
 import { createAsset, sendAsset } from "./asset";
 import { createVault, vaultDeposit, vaultWithdraw, vaultInfo, vaultPhase, getDepositorPosition } from "./vault";
@@ -22,11 +22,29 @@ const envInt = (name: string, fallback: number) => Number(process.env[name] ?? f
 
 export class XrplLedger implements LedgerService {
   private wallets?: Record<Role, Wallet>;
-  private passports: RecordStore = fileStore();
+
+  constructor(private passports: RecordStore = fileStore()) {}
 
   async init() {
     await connect();
     this.wallets ??= loadWallets();
+  }
+
+  // A hosted demo has nobody to run the setup scripts: make the wallets on first boot, and start over after a
+  // Devnet reset or once the vault has reached its redemption date. bootstrap() then rebuilds what was cleared.
+  async recover() {
+    const c = await connect();
+    await fundMissingWallets(c);
+    this.wallets = loadWallets();
+    if (!(await accountExists(c, this.w.issuer.address))) {
+      console.log("Devnet was reset: funding the wallets again and rebuilding the vault");
+      clearState();
+      // ROLES starts with the issuer, so reversing funds it last: an interrupted run is detected again on retry.
+      for (const wallet of Object.values(this.w).reverse()) await c.fundWallet(wallet);
+      return;
+    }
+    const { redemptionDate } = readState();
+    if (redemptionDate && (await ledgerCloseTime(c)) >= redemptionDate) clearVault();
   }
   async close() { await disconnect(); }
 

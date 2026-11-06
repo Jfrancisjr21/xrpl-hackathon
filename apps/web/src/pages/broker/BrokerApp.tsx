@@ -62,6 +62,7 @@ type AlertView = { loanId: string; message: string };
 type AgentAction = "status" | "policy" | "delegation";
 
 const sampleMode = import.meta.env.VITE_MOCK === "true";
+const demoKey: string = import.meta.env.VITE_DEMO_BROKER_KEY ?? ""; // public hosted demo only: test money, so the key can be shown
 
 const tabs: Array<{ id: BrokerTab; label: string }> = [
   { id: "overview", label: "Overview" },
@@ -71,7 +72,7 @@ const tabs: Array<{ id: BrokerTab; label: string }> = [
 ];
 
 function BrokerGate({ onUnlock, onPreview }: { onUnlock: (key: string) => void; onPreview: () => void }) {
-  const [key, setKey] = useState("");
+  const [key, setKey] = useState(demoKey);
 
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -92,11 +93,11 @@ function BrokerGate({ onUnlock, onPreview }: { onUnlock: (key: string) => void; 
           <label htmlFor="broker-key">Broker key</label>
           <input
             id="broker-key"
-            type="password"
-            autoComplete="current-password"
+            type={demoKey ? "text" : "password"}
+            autoComplete={demoKey ? "off" : "current-password"}
             value={key}
             onChange={(event) => setKey(event.target.value)}
-            placeholder="Enter the key shared by Juan"
+            placeholder="Enter the broker key"
           />
           <button className="button button--primary" type="submit" disabled={!key.trim()}>
             Open broker workspace
@@ -105,7 +106,7 @@ function BrokerGate({ onUnlock, onPreview }: { onUnlock: (key: string) => void; 
         <button className="text-button gate-preview" type="button" onClick={onPreview}>
           Preview with sample contract data
         </button>
-        <p className="gate-note">The key stays in this browser session and is sent as <code>x-broker-key</code>.</p>
+        <p className="gate-note">{demoKey ? "Public demo: the key is filled in for you, and everything here runs on test money." : <>The key stays in this browser session and is sent as <code>x-broker-key</code>.</>}</p>
       </section>
     </main>
   );
@@ -1346,6 +1347,7 @@ export function BrokerApp() {
             </button>
           ))}
         </nav>
+        {demoKey ? <a className="nav-item" href="/">Back to borrower view</a> : null}
         <div className="sidebar-meta">
           <span className="signal-dot signal-dot--blue" />
           {preview || sampleMode ? "Sample XRP data" : applicationsError ? "Live data unavailable" : supportingDataAvailable ? "Live lending data" : "Live applications connected"}

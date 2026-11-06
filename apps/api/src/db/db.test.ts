@@ -3,10 +3,8 @@ import { rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
-import {
-  audit, closeLoan, createApplication, getConfig, isBanned, listApplications, listAudit, listPayments,
-  loansPaidOff, OpenApplicationError, openDb, recordPayment, resetAll, setConfig, toView, transition, type Db,
-} from "./db";
+import { audit, closeLoan, createApplication, getConfig, isBanned, listApplications, listAudit, listPayments, loansPaidOff, OpenApplicationError, recordPayment, resetAll, setConfig, toView, transition, type Db } from "./db";
+import { openDb } from "./open";
 
 const ALICE = "rByhcLgLG7rzJ2ceqzJgM4bFjuQodSrYFb";
 const LOAN = "C".repeat(64);

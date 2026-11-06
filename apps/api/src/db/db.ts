@@ -1,19 +1,24 @@
-import Database from "better-sqlite3";
-import { readFileSync } from "node:fs";
 import type { ApplicationStatus, ApplicationView, AuditEvent, Decision, PayMode, ScoreTokenStatus, TxResult } from "@hack/shared";
 
-export type Db = Database.Database;
+// The part of better-sqlite3 these helpers use. Node passes better-sqlite3 (open.ts); the Worker passes a
+// wrapper around Durable Object SQLite, which is also synchronous, so nothing here needs to be async.
+export interface Statement {
+  run(...params: unknown[]): { changes: number | bigint; lastInsertRowid: number | bigint };
+  get(...params: unknown[]): unknown;
+  all(...params: unknown[]): unknown[];
+}
+export interface Db {
+  prepare(sql: string): Statement;
+  exec(sql: string): unknown;
+  transaction<T>(fn: () => T): () => T;
+}
 
 const now = () => new Date().toISOString(); // R15: always ISO 8601, never SQLite's CURRENT_TIMESTAMP
 
-// Opens (or creates) the database and applies the schema. ":memory:" gives a throwaway database for tests.
-export function openDb(path = process.env.DATABASE_PATH ?? "app.db"): Db {
-  const db = new Database(path);
-  db.pragma("journal_mode = WAL");
-  db.pragma("foreign_keys = ON");
-  db.exec(readFileSync(new URL("./schema.sql", import.meta.url), "utf8"));
+// Applies the schema to an open database.
+export function migrate(db: Db, schema: string) {
+  db.exec(schema);
   addMissingColumns(db, "payments", ["principal_paid TEXT", "interest TEXT", "service_fee TEXT"]);
-  return db;
 }
 
 // CREATE TABLE IF NOT EXISTS never changes an existing table, so columns added later are added here.
@@ -96,11 +101,12 @@ export function hasOpenApplication(db: Db, address: string): boolean {
 }
 
 export function listApplications(db: Db, filter: { status?: ApplicationStatus; borrower?: string } = {}): ApplicationRow[] {
+  const status = filter.status ?? null, borrower = filter.borrower ?? null;
   return db
     .prepare(`SELECT * FROM applications
-              WHERE (@status IS NULL OR status = @status) AND (@borrower IS NULL OR borrower_address = @borrower)
+              WHERE (? IS NULL OR status = ?) AND (? IS NULL OR borrower_address = ?)
               ORDER BY id DESC`)
-    .all({ status: filter.status ?? null, borrower: filter.borrower ?? null }) as ApplicationRow[];
+    .all(status, status, borrower, borrower) as ApplicationRow[];
 }
 
 // Moves an application only if it is still in one of the expected states. Returns undefined when it was not,

@@ -6,7 +6,8 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "../app";
 import { testUnderwrite } from "./test-underwrite";
 import { createHash } from "node:crypto";
-import { createApplication, isBanned, listAudit, listPayments, loansPaidOff, openDb, transition, type Db } from "../db/db";
+import { createApplication, isBanned, listAudit, listPayments, loansPaidOff, transition, type Db } from "../db/db";
+import { openDb } from "../db/open";
 
 const KEY = "test-broker-key-123";
 const ALICE = "rByhcLgLG7rzJ2ceqzJgM4bFjuQodSrYFb";

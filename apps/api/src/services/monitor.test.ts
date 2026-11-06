@@ -1,7 +1,8 @@
 import type { LedgerService, LoanSnapshot } from "@hack/ledger";
 import { Alert, type Decision } from "@hack/shared";
 import { beforeEach, describe, expect, it } from "vitest";
-import { createApplication, isBanned, listAudit, loansPaidOff, openDb, transition, type Db } from "../db/db";
+import { createApplication, isBanned, listAudit, loansPaidOff, transition, type Db } from "../db/db";
+import { openDb } from "../db/open";
 import { createMonitor } from "./monitor";
 
 const ALICE = "rByhcLgLG7rzJ2ceqzJgM4bFjuQodSrYFb";

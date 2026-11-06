@@ -1,0 +1,27 @@
+// BROKER_KEY is deliberately public: the login screen shows it and it only guards test money.
+// Wallet seeds are created on first run and stay inside the Durable Object.
+{
+  "name": "confiance",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "routes": [{ "pattern": "confiance.alcoberlabs.xyz", "custom_domain": true }],
+  "assets": {
+    "directory": "../web/dist",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "durable_objects": { "bindings": [{ "name": "CONFIANCE", "class_name": "Confiance" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Confiance"] }],
+  "rules": [{ "type": "Text", "globs": ["**/*.sql"], "fallthrough": true }],
+  "vars": {
+    "XRPL_URL": "wss://s.devnet.rippletest.net:51233",
+    "CORS_ORIGIN": "https://confiance.alcoberlabs.xyz",
+    "BROKER_KEY": "confiance-demo",
+    "DEMO_MODE": "true",
+    "DEMO_FAST_LOANS": "true",
+    "DEMO_IDLE_RESET_MIN": "30",
+    "VAULT_SUBSCRIPTION_SEC": "90",
+    "VAULT_TERM_SEC": "31536000"
+  }
+}

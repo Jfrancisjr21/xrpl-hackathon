@@ -19,9 +19,9 @@ It runs on the XRPL Devnet (a free test network), so no real money is involved.
 
 Pick Alice on the Borrower tab and apply, approve the loan in Broker, then repay it. Every step is a real XRPL Devnet transaction, with test money only. Lender deposits are closed because the vault's deposit window ended when it was created. Data resets after 30 idle minutes.
 
-The team built this at the AI & Fintech XRP Ledger Hackathon (XRPL Commons, NYC, October 2026). Original repo: [Jfrancisjr21/xrpl-hackathon](https://github.com/Jfrancisjr21/xrpl-hackathon).
+The team built this at the AI & Fintech XRP Ledger Hackathon (XRPL Commons, NYC, October 2026).
 
-This copy adds hosting on Cloudflare's free plan. `apps/edge` runs the same Express API inside one SQLite-backed Durable Object, and Workers Assets serves the web app. Deploy with `pnpm run deploy`.
+This branch adds hosting on Cloudflare's free plan. `apps/edge` runs the same Express API inside one SQLite-backed Durable Object, and Workers Assets serves the web app. Deploy with `pnpm run deploy`.
 
 ## Run it locally
 

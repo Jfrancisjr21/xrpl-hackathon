@@ -19,3 +19,6 @@ passports/
 
 # OFAC raw downloads (rebuild with sanctions:fetch)
 packages/risk/data/raw/
+
+# Design-check screenshots and notes (taste skill)
+.taste-skill/

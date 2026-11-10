@@ -14,7 +14,7 @@ export function WalletPicker({ wallets, selected, onSelect }: {
     <div className="picker" role="group" aria-label="Demo borrowers">
       {personas.map((w) => (
         <button key={w.address} type="button" className="persona" data-role={w.role} aria-pressed={selected?.address === w.address} onClick={() => onSelect(w)}>
-          <b>{w.label}</b>
+          <span className="persona-name"><span className="avatar" aria-hidden="true">{w.label.slice(0, 1)}</span><b>{w.label}</b></span>
           {w.role === "borrower" && <span className="status status--negative">Sanctions demo</span>}
           {w.description && <span className="desc">{w.description}</span>}
           <code>{shortAddress(w.address)}</code>

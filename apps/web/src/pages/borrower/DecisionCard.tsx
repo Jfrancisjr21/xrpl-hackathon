@@ -53,11 +53,16 @@ export function DecisionCard({ app, assetLabel, onReapplied }: { app: Applicatio
               <div><dt>Internal (40%): wallet + loans repaid with us</dt><dd className="num">{d.score.internal} / 100</dd></div>
             </dl>
           )}
-          <dl className="score-parts">
+          {/* The wallet signals that build the internal score, each as its true share of its maximum. */}
+          <ul className="parts" aria-label="Wallet signals">
             {PARTS.map((p) => (
-              <div key={p.key}><dt>{p.label}</dt><dd className="num">{d.score![p.key]} / {p.max}</dd></div>
+              <li key={p.key}>
+                <span>{p.label}</span>
+                <span className="part-track" aria-hidden="true"><span style={{ width: `${(d.score![p.key] / p.max) * 100}%` }} /></span>
+                <b className="num">{d.score![p.key]}<small> / {p.max}</small></b>
+              </li>
             ))}
-          </dl>
+          </ul>
         </div>
       ) : d.approved ? null : (
         <p className="hint">Not scored: {d.sanctions.blocked ? "the sanctions check" : d.banned ? "the ban list" : "a check before scoring"} stopped this application first.</p>

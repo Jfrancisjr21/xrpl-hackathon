@@ -6,8 +6,8 @@ import { api } from "../../lib/api";
 import { samples } from "../../samples";
 import { formatDate } from "./model";
 
-/** The internal score's unit, shown next to every score (for example "88 LCS"). */
-export const SCORE_UNIT = "LCS";
+/** The internal score's unit, shown next to every score (for example "88 LCU", Ledger Credit Units). */
+export const SCORE_UNIT = "LCU";
 
 const check = (ok: boolean, label: string) => <StatusBadge value={ok ? "clear" : "review"} label={`${label}: ${ok ? "passed" : "not recorded"}`} />;
 

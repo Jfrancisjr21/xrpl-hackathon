@@ -5,9 +5,8 @@ import { usePoll, useTx } from "../../lib/hooks";
 import { useWallet } from "../../lib/wallet";
 import { ASSET, amount, date, isAmount } from "../../lib/format";
 import { ErrorBanner } from "../../components/ErrorBanner";
-import { PhaseBanner } from "../../components/PhaseBanner";
-import { Stat } from "../../components/Stat";
 import { TxReceipt } from "../../components/TxReceipt";
+import { PhaseSentence, VaultTimeline, when } from "../../components/VaultTimeline";
 import { depositorLocks } from "./locks";
 
 /** Re-renders every second while the deposit window is open, so the form closes when the countdown hits zero. */
@@ -33,25 +32,43 @@ export function DepositorScreen() {
     return <ErrorBanner error={vault.error ? `Couldn't load the vault. ${vault.error}` : "No depositor wallet yet."} onRetry={vault.refresh} />;
   }
   const v = vault.data;
+  const share = v.position?.sharePct ?? 0;
+  // Whole numbers from the ledger, so the subtraction is exact.
+  const lent = Math.max(0, Number(v.assetsTotal) - Number(v.assetsAvailable));
 
   return (
-    <div className="screen">
-      <h1>Earn yield on {ASSET}</h1>
-      <p className="lead">Lenders fund a shared vault. Approved borrowers take loans from it and pay interest; the platform keeps 10% of that interest and lenders earn the rest.</p>
-      <PhaseBanner vault={v} />
+    <div className="screen-page">
+      <header className="page-header">
+        <div><h1>Vault</h1><p><PhaseSentence vault={v} /></p></div>
+      </header>
       <ErrorBanner error={vault.error && `Couldn't refresh the vault; showing the last figures. ${vault.error}`} onRetry={vault.refresh} />
-      <div className="stats">
-        <Stat label="Total in vault" value={amount(v.assetsTotal)} unit={ASSET} />
-        <Stat label="Available to lend" value={amount(v.assetsAvailable)} unit={ASSET} />
-        <Stat label="Lent out" value={`${v.utilizationPct.toFixed(1)}%`} />
+      <VaultTimeline vault={v} />
+      {/* Two equal columns on the canvas: 2 x 1fr + 1 gutter. Position (the answer) on the left, the action beside it. */}
+      <div className="pair-grid">
+        <section className="panel position-panel" aria-labelledby="position-title">
+          <div className="panel-header"><h2 id="position-title">Your position</h2><span className="status status--neutral">{wallet.label}</span></div>
+          <p className="lead-figure num">{amount(v.position?.deposited)}<small> {ASSET}</small></p>
+          <p className="panel-sub num">{share.toFixed(1)}% of the vault</p>
+          <div className="share-track" role="img" aria-label={`${share.toFixed(1)}% of the vault`}><span style={{ width: `${Math.min(100, share)}%` }} /></div>
+          <dl className="kv">
+            <div><dt>Deposits</dt><dd>{v.phase === "subscription" ? `Open until ${when(v.subscriptionDate)}` : v.phase === "investment" ? "Closed while the vault lends" : "Closed · next vault"}</dd></div>
+            <div><dt>Withdrawals</dt><dd>{v.phase === "investment" ? `Open from ${when(v.redemptionDate)}` : "Open now"}</dd></div>
+          </dl>
+          <p className="panel-note">Lenders earn 90% of the interest borrowers pay. Confiance keeps 10%.</p>
+        </section>
+        {/* Keyed by wallet: switching wallets starts a fresh form, so no amount, error or receipt carries over. */}
+        <MoveForm key={wallet.address} vault={v} address={wallet.address} label={wallet.label} now={now} onDone={vault.refresh} />
       </div>
-      <section className="card tile tile-blue" aria-label="Your position">
-        <h2>{wallet.label}'s position</h2>
-        <p className="num"><b className="figure">{amount(v.position?.deposited)}</b> {ASSET} · {(v.position?.sharePct ?? 0).toFixed(1)}% of the vault</p>
+      <section className="panel" aria-labelledby="vault-title">
+        <div className="panel-header"><h2 id="vault-title">The vault</h2><span className="panel-meta">Shared by every lender</span></div>
+        <div className="metric-strip metric-strip--bare">
+          <div className="metric"><span>Total in vault</span><strong className="num">{amount(v.assetsTotal)}<small> {ASSET}</small></strong></div>
+          <div className="metric"><span>Available to lend</span><strong className="num">{amount(v.assetsAvailable)}<small> {ASSET}</small></strong></div>
+          <div className="metric"><span>Lent out</span><strong className="num">{v.utilizationPct.toFixed(1)}%<small> · {amount(String(lent))} {ASSET}</small></strong></div>
+        </div>
+        <div className="share-track share-track--wide" role="img" aria-label={`${v.utilizationPct.toFixed(1)}% of the vault lent out`}><span style={{ width: `${Math.min(100, v.utilizationPct)}%` }} /></div>
+        {v.lossUnrealized !== "0" && <p className="warn">Unrealized loss from impaired loans: {amount(v.lossUnrealized)} {ASSET}</p>}
       </section>
-      {/* Keyed by wallet: switching wallets starts a fresh form, so no amount, error or receipt carries over. */}
-      <MoveForm key={wallet.address} vault={v} address={wallet.address} label={wallet.label} now={now} onDone={vault.refresh} />
-      {v.lossUnrealized !== "0" && <p className="warn">Unrealized loss from impaired loans: {amount(v.lossUnrealized)} {ASSET}</p>}
     </div>
   );
 }
@@ -72,8 +89,8 @@ function MoveForm({ vault: v, address, label, now, onDone }: {
     tx.run(() => api[kind](address, value), async () => { setValue(""); await onDone(); });
 
   return (
-    <section className="card move" aria-label="Deposit or withdraw">
-      <h2>Deposit or withdraw</h2>
+    <section className="panel move" aria-labelledby="move-title">
+      <div className="panel-header"><h2 id="move-title">Deposit or withdraw</h2></div>
       <label className="field">
         <span>Amount</span>
         <span className="field-input">

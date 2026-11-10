@@ -1,61 +1,69 @@
-/* The shell and the user screens (depositor, borrower). Colours, radii and type come from the tokens in app.css. */
+/* The user screens (Lender, Borrower) inside the shared sidebar shell of app.css. Achromatic ledger style
+   (taste skill): the chrome is ink on cream paper; forest is the one data hue, on each screen's main figure. */
 
-.shell-bar {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 0 24px;
-  padding: 0 24px; background: var(--ground); border-bottom: 1px solid var(--border);
-}
-.shell-tabs { display: flex; gap: 20px; align-self: stretch; }
-.shell-tab {
-  height: 52px; padding: 0; margin-bottom: -1px; background: none; border: 0; border-bottom: 2px solid transparent;
-  font-size: 14px; font-weight: 500; color: var(--muted); cursor: pointer;
-}
-.shell-tab:hover { color: var(--text); }
-.shell-tab[aria-current="page"] { color: var(--text); border-bottom-color: var(--text); }
-.shell-net { font-size: 12px; color: var(--muted); }
-.wallet-switcher { margin-left: auto; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+/* Shell additions: nav groups, the borrower switcher and the sidebar foot. */
+.nav-group { margin: 22px 10px 6px; color: var(--muted); font-size: 12px; }
+.nav-group:first-child { margin-top: 0; }
+a.nav-item { text-decoration: none; }
+.wallet-switcher { display: grid; gap: 6px; margin: 24px 2px 0; font-size: 12px; color: var(--muted); }
 .wallet-switcher select {
-  height: 32px; padding: 0 8px; border: 1px solid var(--control); border-radius: var(--radius-control);
+  width: 100%; height: 36px; padding: 0 8px; border: 1px solid var(--control); border-radius: var(--radius-control);
   background: var(--surface); color: var(--text); font: inherit; font-size: 13px;
 }
-.shell-main { max-width: 1100px; margin: 0 auto; padding: 32px 24px 64px; }
+.sidebar-foot { margin-top: auto; display: grid; gap: 14px; padding-top: 24px; }
+.sidebar-foot .sidebar-meta { margin-top: 0; }
+.sidebar-foot .theme-toggle { justify-self: start; }
+.signal-dot--ok { background: var(--positive); }
 
-/* Pastel consumer (taste skill): each figure sits on a pale tile of its own hue with the dark of that hue as
-   ink, under one large radius. Scoped to .screen, so Ilian's broker workspace keeps app.css as it is.
-   Every ink is at least 7:1 on its tile. */
+/* Screen page: header, then blocks on one gutter. Panels and the metric strip come from app.css. */
+.screen-page { display: grid; gap: 16px; }
+.screen-page > .page-header { min-height: 0; margin-bottom: 8px; }
+/* 2 x 1fr + one 16px gutter: both cards land on the canvas edges and share a bottom edge. */
+.pair-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: stretch; }
+.panel-meta { color: var(--muted); font-size: 12px; }
+.panel-sub { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+.lead-figure { margin: 4px 0 0; font-size: 32px; font-weight: 600; letter-spacing: -.02em; line-height: 1.1; }
+.lead-figure small, .metric-strip--bare strong small { color: var(--muted); font-size: 14px; font-weight: 500; letter-spacing: 0; }
+/* A zero share draws no stub: the fill is the true ratio. */
+.share-track { height: 8px; margin-top: 16px; border-radius: 2px; background: var(--raised); overflow: hidden; }
+.share-track span { display: block; height: 100%; border-radius: inherit; background: var(--data); }
+.share-track--wide { margin-top: 4px; }
+.position-panel .panel-note { margin-top: 16px; font-size: 13px; line-height: 1.5; }
+/* Key-value rows: what the lender can do right now. */
+.kv { display: grid; margin: 16px 0 0; }
+.kv div { min-height: 36px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-top: 1px solid var(--rule); }
+.kv dt { color: var(--muted); font-size: 13px; }
+.kv dd { margin: 0; font-size: 13px; font-weight: 500; text-align: right; }
+.metric-strip--bare { margin-bottom: 14px; border: 0; background: transparent; }
+.metric-strip--bare .metric { min-height: 0; gap: 6px; padding: 4px 20px; }
+.metric-strip--bare .metric:first-child { padding-left: 0; }
+
+/* The vault timeline: deposit window, lending, withdrawals on one track, the current phase in the data hue. */
+.vault-timeline {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 0; padding: 20px;
+  list-style: none; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-card);
+}
+.vt-step { display: grid; gap: 8px; align-content: start; color: var(--muted); }
+.vt-bar { height: 6px; border-radius: 2px; background: var(--raised); }
+.vt-step--done .vt-bar { background: var(--control); }
+.vt-step--now .vt-bar { background: var(--data); }
+.vt-step b { display: flex; align-items: center; gap: 8px; color: var(--text); font-size: 14px; font-weight: 600; }
+.vt-step--next b { color: var(--muted); font-weight: 500; }
+.vt-now { padding: 1px 8px 2px; border-radius: 2px; background: var(--pill-positive-bg); color: var(--pill-positive-ink); font-size: 11px; font-weight: 500; }
+.vt-step small { font-size: 13px; }
+
+/* Borrower (reworked next): still on .screen and .card. */
 .screen {
-  --tile-radius: 20px; --control-radius: 10px;
-  --blue: #e3efff;  --blue-ink: #0a3a80;
-  --teal: #daf2ee;  --teal-ink: #0e4c45;
-  --amber: #fdefd5; --amber-ink: #6b3a06;
-  --rose: #fde6ea;  --rose-ink: #7a1d2a;
-  --action: #1d5fd6; --action-hover: #174cb0;
+  --tile-radius: var(--radius-card); --control-radius: var(--radius-control);
   display: grid; gap: 16px; color: var(--text);
 }
-.screen h1 { margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -.01em; }
+.screen h1 { margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -.02em; }
 .lead { margin: 0; max-width: 70ch; color: var(--muted); font-size: 15px; line-height: 1.5; }
 .hint { margin: 0; color: var(--muted); font-size: 14px; }
 
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--tile-radius, var(--radius-card)); padding: var(--pad); }
-.card h2 { margin: 0 0 8px; font-size: 16px; font-weight: 500; }
+.card h2 { margin: 0 0 8px; font-size: 16px; font-weight: 600; }
 .card p { margin: 0; }
-.tile { border: 0; }
-.tile-blue { background: var(--blue); color: var(--blue-ink); }
-.tile-teal { background: var(--teal); color: var(--teal-ink); }
-.tile-amber { background: var(--amber); color: var(--amber-ink); }
-.figure { font-size: 32px; font-weight: 600; letter-spacing: -.01em; }
-
-.phase { padding: 12px 16px; border-radius: var(--control-radius); background: var(--pill-neutral-bg); color: var(--pill-neutral-ink); font-size: 14px; }
-.phase--open { background: var(--pill-positive-bg); color: var(--pill-positive-ink); }
-
-/* Three tiles, one hue each: what is in the vault, what can still be lent, how much is out. */
-.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
-.stat { display: grid; gap: 4px; padding: 20px var(--pad); border-radius: var(--tile-radius); }
-.stat:nth-child(1) { background: var(--blue); color: var(--blue-ink); }
-.stat:nth-child(2) { background: var(--teal); color: var(--teal-ink); }
-.stat:nth-child(3) { background: var(--amber); color: var(--amber-ink); }
-.stat span { font-size: 13px; font-weight: 500; }
-.stat b { font-size: 28px; font-weight: 600; }
-.stat small { font-size: 13px; font-weight: 500; }
 
 .screen .button { border-radius: var(--control-radius); }
 .screen .button--primary { background: var(--action); }
@@ -80,30 +88,31 @@
 .receipt { margin: 0; padding: 8px 12px; border-radius: var(--radius-control); background: var(--pill-positive-bg); color: var(--pill-positive-ink); font-size: 13px; }
 .receipt a { color: inherit; }
 
-.picker { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--gap); }
-/* Each borrower keeps one hue, at least 60 degrees from the next: Alice blue, Carol teal, Bob amber, Mallory rose. */
+.picker { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+/* Each borrower keeps one pale hue on their initial only, 60+ degrees apart; the card stays the panel. */
 .persona {
   display: grid; gap: 6px; align-content: start; justify-items: start; padding: 16px; text-align: left;
-  background: var(--surface); border: 2px solid transparent; border-radius: var(--tile-radius); color: var(--text); cursor: pointer;
-  transition: transform 120ms ease;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-card); color: var(--text); cursor: pointer;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
 }
-.persona[data-role="alice"] { background: var(--blue); color: var(--blue-ink); }
-.persona[data-role="carol"] { background: var(--teal); color: var(--teal-ink); }
-.persona[data-role="bob"] { background: var(--amber); color: var(--amber-ink); }
-.persona[data-role="borrower"] { background: var(--rose); color: var(--rose-ink); }
-.persona:hover { transform: translateY(-1px); }
-.persona[aria-pressed="true"] { border-color: currentColor; }
-.persona b { font-size: 16px; font-weight: 600; }
-.persona .desc { font-size: 13px; }
-.persona code { font-size: 12px; opacity: .85; }
-@media (prefers-reduced-motion: reduce) { .persona { transition: none; } .persona:hover { transform: none; } }
+.persona:hover { border-color: var(--control); }
+.persona[aria-pressed="true"] { border-color: var(--text); box-shadow: inset 0 0 0 1px var(--text); }
+.persona-name { display: flex; align-items: center; gap: 10px; }
+.avatar { width: 28px; height: 28px; flex: none; display: grid; place-items: center; border-radius: 50%; font-size: 13px; font-weight: 600; background: var(--raised); color: var(--text); }
+.persona[data-role="alice"] .avatar { background: var(--blue); color: var(--blue-ink); }
+.persona[data-role="carol"] .avatar { background: var(--teal); color: var(--teal-ink); }
+.persona[data-role="bob"] .avatar { background: var(--amber); color: var(--amber-ink); }
+.persona[data-role="borrower"] .avatar { background: var(--rose); color: var(--rose-ink); }
+.persona b { font-size: 15px; font-weight: 600; }
+.persona .desc { color: var(--muted); font-size: 13px; line-height: 1.4; }
+.persona code { color: var(--muted); font-size: 12px; }
 
 /* Borrower: the form, the timeline (a blue tile) and the decision (the white panel that holds the evidence). */
 .apply { display: grid; gap: 10px; }
 .apply h2 { margin: 0; }
 .segment { display: inline-flex; gap: 4px; margin: 0; padding: 4px; border: 0; border-radius: var(--control-radius); background: var(--pill-neutral-bg); justify-self: start; }
 .segment legend { float: left; width: 100%; margin-bottom: 6px; padding: 0; font-size: 14px; font-weight: 500; }
-.segment-option { position: relative; min-width: 56px; padding: 8px 14px; border-radius: 8px; text-align: center; font-size: 14px; font-weight: 500; color: var(--muted); cursor: pointer; }
+.segment-option { position: relative; min-width: 56px; padding: 8px 14px; border-radius: 2px; text-align: center; font-size: 14px; font-weight: 500; color: var(--muted); cursor: pointer; }
 .segment-option input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 .segment-option.is-on { background: var(--surface); color: var(--text); }
 .segment-option:has(input:focus-visible) { outline: 2px solid var(--data); outline-offset: 1px; }
@@ -111,17 +120,17 @@
 .consent input { margin-top: 3px; }
 .notice { margin: 0; padding: 10px 12px; border-radius: var(--control-radius); background: var(--blue); color: var(--blue-ink); font-size: 14px; }
 
-.timeline-wrap { display: grid; gap: 8px; padding: 20px var(--pad); border-radius: var(--tile-radius); background: var(--blue); color: var(--blue-ink); }
-.timeline { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin: 0; padding: 0; list-style: none; }
-.step { display: grid; gap: 8px; font-size: 13px; font-weight: 500; opacity: .55; }
-.step-dot { width: 100%; height: 6px; border-radius: 999px; background: currentColor; opacity: .3; }
-.step--done, .step--current, .step--failed { opacity: 1; }
-.step--done .step-dot { opacity: 1; }
-.step--current .step-dot { opacity: 1; background: var(--action); }
-.step--current { font-weight: 700; }
-.step--failed { color: var(--negative); }
-.step--failed .step-dot { opacity: 1; background: var(--negative); }
-.timeline-note { margin: 0; font-size: 14px; font-weight: 500; color: var(--negative); }
+.timeline-wrap { display: grid; gap: 12px; padding: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-card); }
+.timeline { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; margin: 0; padding: 0; list-style: none; }
+.step { display: grid; gap: 8px; color: var(--muted); font-size: 13px; font-weight: 500; }
+.step-dot { width: 100%; height: 6px; border-radius: 2px; background: var(--raised); }
+.step--done { color: var(--text); }
+.step--done .step-dot { background: var(--control); }
+.step--current { color: var(--text); font-weight: 600; }
+.step--current .step-dot { background: var(--data); }
+.step--failed { color: var(--negative); font-weight: 600; }
+.step--failed .step-dot { background: var(--negative); }
+.timeline-note { margin: 0; color: var(--negative); font-size: 14px; font-weight: 500; }
 
 .decision { display: grid; gap: 14px; }
 .decision-head { display: flex; align-items: center; gap: 10px; }
@@ -130,13 +139,23 @@
 .score-line { display: flex; align-items: baseline; gap: 10px; font-size: 14px; }
 .score-line b { font-size: 24px; font-weight: 600; }
 .score-min { color: var(--muted); font-size: 13px; }
-.score-bar { position: relative; height: 10px; border-radius: 999px; background: var(--pill-neutral-bg); overflow: visible; }
+.score-bar { position: relative; height: 10px; border-radius: 2px; background: var(--pill-neutral-bg); overflow: visible; }
 .score-bar span { display: block; height: 100%; border-radius: inherit; background: var(--action); }
 .score-bar i { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--text); }
 .score-parts, .cost dl { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 0; }
 .score-parts div, .cost dl div { padding: 10px 12px; border-radius: var(--control-radius); background: var(--raised); }
 .score-parts dt, .cost dt { font-size: 12px; color: var(--muted); }
 .score-parts dd, .cost dd { margin: 2px 0 0; font-size: 15px; font-weight: 600; }
+/* Wallet signals: label, a thin bar at the true share, the points on one right edge. */
+.parts { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.parts li { min-height: 36px; display: grid; grid-template-columns: minmax(120px, 1fr) minmax(80px, 1.2fr) 64px; align-items: center; gap: 12px; font-size: 13px; }
+.part-track { height: 6px; border-radius: 2px; background: var(--raised); overflow: hidden; }
+.part-track span { display: block; height: 100%; border-radius: inherit; background: var(--data); }
+.parts b { text-align: right; font-size: 14px; font-weight: 600; }
+.parts b small { color: var(--muted); font-weight: 400; }
+.stack { display: grid; gap: 16px; align-content: start; min-width: 0; }
+.pair-grid--top { align-items: start; }
+.single-column { display: grid; gap: 16px; max-width: 760px; }
 .sanctions { margin: 0; font-size: 14px; }
 .sanctions--blocked { color: var(--negative); }
 .offer { margin: 0; font-size: 15px; }
@@ -146,7 +165,7 @@
 .cost h3 { margin: 0; font-size: 15px; font-weight: 600; }
 .cost dl { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .decision-receipt { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0; font-size: 14px; }
-.decision-receipt code { padding: 2px 6px; border-radius: 6px; background: var(--raised); }
+.decision-receipt code { padding: 2px 6px; border-radius: 2px; background: var(--raised); }
 .decision-receipt a { color: var(--action); font-weight: 500; }
 
 /* My loan (Phase 4): the facts as tone-step cells, payments as the primary action, the schedule as a plain list. */
@@ -162,19 +181,13 @@
 .schedule li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--rule); font-size: 14px; }
 .schedule li:last-child { border-bottom: 0; }
 
-/* BrokerApp was built as a whole page with bars fixed to the window. Inside the shell they sit below the
-   shell header instead of over it: the sidebar takes its grid column, the phone menu bar sticks in the tab. */
-@media (min-width: 1101px) {
-  .shell .sidebar { position: sticky; top: 0; height: 100vh; grid-column: 1; grid-row: 1; align-self: start; }
-}
-@media (max-width: 1100px) {
-  .shell .app-shell { padding-top: 0; }
-  .shell .mobile-header { position: sticky; top: 0; }
-}
-
 @media (max-width: 760px) {
+  .pair-grid, .vault-timeline { grid-template-columns: minmax(0, 1fr); }
+  .metric-strip--bare { grid-template-columns: minmax(0, 1fr); }
+  .metric-strip--bare .metric { padding: 12px 0; border-left: 0; border-top: 1px solid var(--rule); }
+  .metric-strip--bare .metric:first-child { padding-top: 0; border-top: 0; }
+  .metric-strip--bare .metric:last-child { grid-column: auto; }
   .picker { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .stats { grid-template-columns: minmax(0, 1fr); }
   .timeline { grid-template-columns: minmax(0, 1fr); }
   .step { grid-template-columns: 24px 1fr; align-items: center; }
   .step-dot { height: 10px; }
@@ -183,17 +196,10 @@
   .loan-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .loan-facts div:last-child:nth-child(odd) { grid-column: 1 / -1; }
 }
-@media (max-width: 640px) {
-  .shell-bar, .shell-main { padding-left: 16px; padding-right: 16px; }
-  .wallet-switcher { margin-left: 0; width: 100%; padding-bottom: 8px; }
-  .wallet-switcher select { flex: 1; min-width: 0; height: 40px; }
-  .shell-net { width: 100%; padding-bottom: 10px; }
-  .shell-tab { height: 48px; }
-}
 
-/* Cream Ledger theme (canvas Option 11), light and dark. useTheme() sets data-theme on <html> only while the
-   Lender/Borrower app is mounted, so the broker dashboard keeps app.css as it is. Light: cream paper, forest ink.
-   Dark: purple-black, lavender ink. Text is at least 4.5:1 on its ground in both. */
+/* Cream Ledger theme, light and dark, for every page (the ThemeToggle sets data-theme on <html>).
+   Light: cream paper, forest ink. Dark: a neutral green-black with cream ink and a light forest data hue, no
+   violet. Text is at least 4.5:1 on its ground in both. */
 :root[data-theme="light"] {
   --ground: #f4efe3; --surface: #fbf8ef; --raised: #ede6d4; --border: #e2d9c4; --rule: #eae2cf; --control: #b9ae95;
   --text: #1e2a22; --muted: #535d54; --accent: #1f4d36; --data: #1f4d36;
@@ -202,23 +208,29 @@
   --pill-negative-bg: #f6ddd5; --pill-negative-ink: #7a2a1c;
   --pill-warning-bg: #f6e7c8; --pill-warning-ink: #6b4508;
   --pill-neutral-bg: #ede6d4; --pill-neutral-ink: #3f4a41;
+  --badge-positive-bg: #2f7d4f; --badge-positive-ink: #ffffff;
+  --badge-warning-bg: #e9a52c; --badge-warning-ink: #2e1d00;
+  --badge-negative-bg: #b8402b; --badge-negative-ink: #ffffff;
   --on-action: #f4efe3; --action-hover: #163828; --knob: #fbf8ef;
   --danger-line: #e3b3a6; --warn-line: #e3cc96; --ok-line: #b5d2ba;
   color-scheme: light;
 }
 :root[data-theme="dark"] {
-  --ground: #16111f; --surface: #221a33; --raised: #2a2140; --border: #3a2f52; --rule: #2c2340; --control: #5f5080;
-  --text: #ece5d3; --muted: #b5adca; --accent: #c3a8f5; --data: #c3a8f5;
-  --positive: #8fd6a6; --negative: #f4a3a3; --warning: #f2d08f;
-  --pill-positive-bg: #1f3326; --pill-positive-ink: #b5ebc6;
-  --pill-negative-bg: #3d1c24; --pill-negative-ink: #f8c4cc;
-  --pill-warning-bg: #3a2c12; --pill-warning-ink: #f5dba6;
-  --pill-neutral-bg: #2a2140; --pill-neutral-ink: #ddd5ec;
-  --on-action: #24124a; --action-hover: #d3befa; --knob: #ece5d3;
-  --danger-line: #6b3340; --warn-line: #6a5426; --ok-line: #355c42;
+  --ground: #101412; --surface: #171c19; --raised: #1f2622; --border: #28312c; --rule: #202823; --control: #46524b;
+  --text: #e9ebe7; --muted: #aab3ac; --accent: #8fcca6; --data: #8fcca6;
+  --positive: #8fd6a6; --negative: #f2a39a; --warning: #ecc98a;
+  --pill-positive-bg: #1c2e23; --pill-positive-ink: #b5ebc6;
+  --pill-negative-bg: #3a1f1c; --pill-negative-ink: #f5c2ba;
+  --pill-warning-bg: #33291a; --pill-warning-ink: #f0d6a2;
+  --pill-neutral-bg: #222a25; --pill-neutral-ink: #d6dcd7;
+  --badge-positive-bg: #4cb87a; --badge-positive-ink: #08160e;
+  --badge-warning-bg: #f0b444; --badge-warning-ink: #241600;
+  --badge-negative-bg: #e8705c; --badge-negative-ink: #1d0805;
+  --on-action: #0f1a13; --action-hover: #a4d8b6; --knob: #e9ebe7;
+  --danger-line: #6b3b33; --warn-line: #6a5a33; --ok-line: #355c42;
   color-scheme: dark;
 }
-/* The figure tiles take the ledger's own colours: forest, sage, parchment and margin red; lavender and plum at night. */
+/* The borrower tiles take the ledger's own colours: forest, sage, parchment and margin red, darkened at night. */
 :root[data-theme="light"] .screen {
   --blue: #dfeadf; --blue-ink: #173826;
   --teal: #e6ead6; --teal-ink: #36461c;
@@ -227,11 +239,11 @@
   --action: #1f4d36; --action-hover: #163828;
 }
 :root[data-theme="dark"] .screen {
-  --blue: #2e2452; --blue-ink: #dccbfb;
-  --teal: #3a2447; --teal-ink: #ecc9f2;
-  --amber: #3a2c17; --amber-ink: #f2d08f;
-  --rose: #3d1c2a; --rose-ink: #f4b4c6;
-  --action: #c3a8f5; --action-hover: #d3befa;
+  --blue: #1f2b24; --blue-ink: #cfe6d6;
+  --teal: #242a1d; --teal-ink: #dfe6c8;
+  --amber: #302816; --amber-ink: #f0d6a2;
+  --rose: #33201c; --rose-ink: #f5c2ba;
+  --action: #8fcca6; --action-hover: #a4d8b6;
 }
 /* app.css never sets the page text colour, and hard-codes the colours below for its original white look.
    Each one is re-pointed at the theme's tokens here, so app.css itself stays as Ilian wrote it. */
@@ -260,7 +272,10 @@
 :root[data-theme] .paused-banner,
 :root[data-theme] .decision-warning,
 :root[data-theme] .feature-notice { border-color: var(--warn-line); background: var(--pill-warning-bg); color: var(--pill-warning-ink); }
-:root[data-theme] .status--warning { border-color: var(--warn-line); }
+/* Status badges are solid so they stand out from the cream panels; notices keep the soft pills. */
+:root[data-theme] .status--positive { background: var(--badge-positive-bg); color: var(--badge-positive-ink); }
+:root[data-theme] .status--warning { background: var(--badge-warning-bg); color: var(--badge-warning-ink); border-color: transparent; }
+:root[data-theme] .status--negative { background: var(--badge-negative-bg); color: var(--badge-negative-ink); }
 :root[data-theme] .alert-error,
 :root[data-theme] .revenue-warning,
 :root[data-theme] .block-error,
@@ -283,3 +298,56 @@
 /* The toggle sits beside the logo on the broker sign-in card, and beside Refresh on the broker dashboard. */
 .gate-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 64px; }
 .gate-panel .gate-top .product-lockup { margin-bottom: 0; }
+
+/* Forest frame: a dark forest sidebar, one solid forest hero per screen, white panels and lime primary actions.
+   The sidebar and heroes redefine the theme tokens locally, so everything inside them follows without new rules. */
+:root[data-theme="light"] {
+  --surface: #ffffff; --border: #d8ceb6;
+  --frame: #123222; --frame-raised: #1f4d36; --frame-ink: #f4efe3; --frame-muted: #a9c4b3; --frame-rule: rgba(244, 239, 227, .16);
+  --hero: #1f4d36; --lime: #c8f05a; --lime-hover: #b5e03c; --lime-ink: #123222; --title: #123222;
+}
+:root[data-theme="dark"] {
+  --frame: #0b1a12; --frame-raised: #1a3a29; --frame-ink: #e9ebe7; --frame-muted: #93ab9c; --frame-rule: rgba(233, 235, 231, .12);
+  --hero: #1f4d36; --lime: #c8f05a; --lime-hover: #d6f57d; --lime-ink: #123222; --title: var(--text);
+}
+
+/* The frame */
+:root[data-theme] .sidebar,
+:root[data-theme] .mobile-header {
+  --text: var(--frame-ink); --muted: var(--frame-muted); --raised: var(--frame-raised); --rule: var(--frame-rule);
+  --surface: var(--frame-raised); --border: var(--frame-rule); --control: var(--frame-rule); --accent: var(--lime);
+  background: var(--frame); color: var(--frame-ink);
+}
+:root[data-theme] .sidebar .product-lockup,
+:root[data-theme] .mobile-header .product-lockup { color: var(--frame-ink); }
+.sidebar .brand-symbol--color, .mobile-header .brand-symbol--color { display: none; }
+.sidebar .brand-symbol--white, .mobile-header .brand-symbol--white { display: block; }
+.sidebar .workspace-label strong { color: var(--frame-ink); }
+:root[data-theme] .nav-item:hover { color: var(--frame-ink); }
+:root[data-theme] .nav-item--active { background: var(--frame-raised); color: var(--frame-ink); box-shadow: inset 3px 0 0 var(--lime); font-weight: 600; }
+:root[data-theme] .nav-item b,
+:root[data-theme] .mobile-header span { background: var(--lime); color: var(--lime-ink); font-weight: 700; }
+:root[data-theme] .mobile-header button { color: var(--frame-ink); }
+
+/* One bright colour, kept for the action that moves things forward */
+:root[data-theme] .button--primary { background: var(--lime); color: var(--lime-ink); font-weight: 700; }
+:root[data-theme] .button--primary:hover:not(:disabled) { background: var(--lime-hover); }
+
+/* Heavier titles, so the step from headline to detail is obvious */
+.page-header h1 { font-size: 32px; font-weight: 700; letter-spacing: -.025em; color: var(--title); }
+.panel-header h2, .decision-head h2 { font-weight: 700; }
+.lead-figure { font-size: 40px; font-weight: 700; }
+
+/* The hero: Your position (lender), the score (borrower), Vault total (broker) */
+:root[data-theme] .position-panel,
+:root[data-theme] .metric--lead,
+:root[data-theme] .decision .score,
+:root[data-theme] .persona[aria-pressed="true"] {
+  --text: #f4efe3; --muted: #b9d8c4; --raised: rgba(244, 239, 227, .12); --rule: rgba(244, 239, 227, .18);
+  --data: var(--lime); --action: var(--lime); --pill-neutral-bg: rgba(244, 239, 227, .16); --pill-neutral-ink: #f4efe3;
+  background: var(--hero); color: var(--text); border-color: var(--hero);
+}
+:root[data-theme] .metric--lead strong { font-size: 34px; }
+.decision .score { padding: 18px; }
+:root[data-theme] .persona[aria-pressed="true"] { box-shadow: inset 0 -3px 0 var(--lime); }
+.decision .score-line b { font-size: 34px; font-weight: 700; }

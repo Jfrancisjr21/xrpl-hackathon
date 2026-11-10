@@ -36,7 +36,7 @@ export function ApplyForm({ address, assetLabel, loansOpenAt, onApplied }: {
         <span>Amount</span>
         <span className="field-input">
           <input
-            inputMode="numeric" autoComplete="off" placeholder="500" value={value} disabled={tx.pending}
+            inputMode="numeric" autoComplete="off" placeholder="Enter Loan Amount" value={value} disabled={tx.pending}
             aria-invalid={invalid} aria-describedby="apply-help"
             onChange={(e) => setValue(e.target.value.trim())}
           />

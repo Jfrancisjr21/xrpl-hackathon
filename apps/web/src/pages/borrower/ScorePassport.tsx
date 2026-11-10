@@ -25,9 +25,8 @@ export function ScorePassport({ address }: { address: string }) {
       {!t && data.status === "revoked" && <p className="hint">This passport was withdrawn, for example after a defaulted loan.</p>}
       {t && (
         <>
-          <dl className="score-parts">
-            <div><dt>Ledger Credit Score</dt><dd className="num">{t.lcs} LCS</dd></div>
-            <div><dt>Level</dt><dd>{t.level}</dd></div>
+          <p className="lead-figure num">{t.lcs}<small> LCU · Level {t.level}</small></p>
+          <dl className="kv">
             <div><dt>Issued</dt><dd className="num">{date(t.issuedAt)}</dd></div>
             <div><dt>Valid until</dt><dd className="num">{date(t.expiresAt)}</dd></div>
             <div><dt>Held by</dt><dd>{t.holder === address ? "Your wallet" : "Our issuer (not moved yet)"}</dd></div>

@@ -209,8 +209,9 @@ function ApplicationsTable({
             <th className="num">Score</th>
             <th>Recommendation</th>
             <th>Sanctions</th>
-            <th>Status</th>
-            <th>Created</th>
+            {/* The overview queue only lists pending applications, so status and date add nothing there. */}
+            {!compact && <th>Status</th>}
+            {!compact && <th>Created</th>}
             <th aria-label="Actions" />
           </tr>
         </thead>
@@ -231,8 +232,8 @@ function ApplicationsTable({
               <td className="num score-cell">{application.score ? formatNumber(application.score) : "—"}</td>
               <td><StatusBadge value={application.recommendation} /></td>
               <td><StatusBadge value={application.sanctions} /></td>
-              <td><StatusBadge value={application.status} /></td>
-              <td><time dateTime={application.createdAt}>{formatDate(application.createdAt)}</time></td>
+              {!compact && <td><StatusBadge value={application.status} /></td>}
+              {!compact && <td><time dateTime={application.createdAt}>{formatDate(application.createdAt)}</time></td>}
               <td className="row-action"><button type="button" onClick={() => onSelect(application)}>{application.status === "pending_review" ? "Review" : "View"}</button></td>
             </tr>
           ))}
@@ -381,47 +382,50 @@ function Overview({
   return (
     <>
       <MetricStrip snapshot={snapshot} loans={loans} />
+      {/* Two independent stacks, so a tall panel never leaves a gap beside a short one. */}
       <div className="overview-grid">
-        <Panel
-          title="Applications requiring a decision"
-          action={<button className="text-button" type="button" onClick={() => onNavigate("applications")}>View queue</button>}
-          className="queue-panel"
-        >
-          {pending.length ? (
-            <ApplicationsTable applications={pending} onSelect={onApplication} compact />
-          ) : (
-            <div className="empty-state">No applications are waiting for review.</div>
-          )}
-        </Panel>
-        <CoverPanel snapshot={snapshot} pendingAction={pendingCoverAction} notice={coverNotice} onAdjust={onAdjustCover} />
+        <div className="stack">
+          <Panel
+            title="Applications requiring a decision"
+            action={<button className="text-button" type="button" onClick={() => onNavigate("applications")}>View queue</button>}
+            className="queue-panel"
+          >
+            {pending.length ? (
+              <ApplicationsTable applications={pending} onSelect={onApplication} compact />
+            ) : (
+              <div className="empty-state">No applications are waiting for review.</div>
+            )}
+          </Panel>
+          <Panel title="Loan alerts" action={<button className="text-button" type="button" onClick={() => onNavigate("loans")}>Open loans</button>}>
+            {alertError ? (
+              <div className="alert-error" role="alert">
+                <span>{alertError}</span>
+                <button className="text-button" type="button" onClick={onRefreshAlerts}>Retry</button>
+              </div>
+            ) : alerts.length ? (
+              <div className="alert-list">
+                {alerts.map((alert) => {
+                const loan = loans.find((item) => item.id === alert.loanId);
+                return (
+                  <button key={alert.loanId} type="button" className="alert-row" onClick={() => loan && onLoan(loan)}>
+                    <span className="signal-dot" aria-hidden="true" />
+                    <span><strong>{alert.message}</strong><small>{loan?.persona ?? "Borrower"} · {alert.loanId} · action available</small></span>
+                    <span>Review</span>
+                  </button>
+                );
+                })}
+              </div>
+            ) : <div className="empty-state">No loan alerts. All current payments are on schedule.</div>}
+          </Panel>
+          <RevenuePanel snapshot={snapshot} />
+        </div>
+        <div className="stack">
+          <CoverPanel snapshot={snapshot} pendingAction={pendingCoverAction} notice={coverNotice} onAdjust={onAdjustCover} />
+          <Panel title="Verify a wallet" action={<span className="panel-note">Lender view</span>}>
+            <VerifyPanel preview={preview} />
+          </Panel>
+        </div>
       </div>
-      <div className="overview-lower">
-        <Panel title="Loan alerts" action={<button className="text-button" type="button" onClick={() => onNavigate("loans")}>Open loans</button>}>
-          {alertError ? (
-            <div className="alert-error" role="alert">
-              <span>{alertError}</span>
-              <button className="text-button" type="button" onClick={onRefreshAlerts}>Retry</button>
-            </div>
-          ) : alerts.length ? (
-            <div className="alert-list">
-              {alerts.map((alert) => {
-              const loan = loans.find((item) => item.id === alert.loanId);
-              return (
-                <button key={alert.loanId} type="button" className="alert-row" onClick={() => loan && onLoan(loan)}>
-                  <span className="signal-dot" aria-hidden="true" />
-                  <span><strong>{alert.message}</strong><small>{loan?.persona ?? "Borrower"} · {alert.loanId} · action available</small></span>
-                  <span>Review</span>
-                </button>
-              );
-              })}
-            </div>
-          ) : <div className="empty-state">No loan alerts. All current payments are on schedule.</div>}
-        </Panel>
-        <RevenuePanel snapshot={snapshot} />
-      </div>
-      <Panel title="Verify a wallet" action={<span className="panel-note">What another lender sees</span>}>
-        <VerifyPanel preview={preview} />
-      </Panel>
     </>
   );
 }
@@ -696,7 +700,7 @@ function PassportSection({ loan }: { loan: LoanView }) {
   const held = status === "held" || status === "minted";
   const open = loan.status === "active" || loan.status === "impaired";
   const state = token
-    ? `On the ledger: ${token.lcs} LCS, level ${token.level}${token.expired ? ", expired" : ""}. ${token.holder === loan.borrower ? "Held by the borrower" : "Still on the issuer"}.`
+    ? `On the ledger: ${token.lcs} LCU, level ${token.level}${token.expired ? ", expired" : ""}. ${token.holder === loan.borrower ? "Held by the borrower" : "Still on the issuer"}.`
     : status === "pending" ? "Minting in the background (10 to 15 seconds)…"
     : status === "failed" ? `Last attempt failed: ${record.data?.error ?? "unknown error"}`
     : status === "revoked" ? "Revoked."
@@ -1340,11 +1344,15 @@ export function BrokerApp() {
         <BrandLogo />
         <div className="workspace-label"><span>Broker workspace</span><strong>Devnet operations</strong></div>
         <nav aria-label="Broker navigation">
+          <p className="nav-group">Broker</p>
           {tabs.map((item) => (
             <button className={tab === item.id ? "nav-item nav-item--active" : "nav-item"} type="button" key={item.id} onClick={() => selectTab(item.id)}>
               <span>{item.label}</span>{item.id === "applications" && pendingCount ? <b>{formatNumber(pendingCount)}</b> : null}
             </button>
           ))}
+          <p className="nav-group">Lend and borrow</p>
+          <a className="nav-item" href="/"><span>Lender</span></a>
+          <a className="nav-item" href="/#borrower"><span>Borrower</span></a>
         </nav>
         <div className="sidebar-meta">
           <span className="signal-dot signal-dot--blue" />

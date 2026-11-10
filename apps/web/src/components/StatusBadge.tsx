@@ -1,4 +1,4 @@
-const positive = new Set(["approved", "active", "paid", "running", "clear", "good"]);
+const positive = new Set(["approve", "approved", "active", "paid", "running", "clear", "good"]);
 const negative = new Set(["rejected", "denied", "failed", "defaulted", "flagged", "risk"]);
 const warning = new Set(["pending_review", "originating", "impaired", "review", "watch"]);
 
